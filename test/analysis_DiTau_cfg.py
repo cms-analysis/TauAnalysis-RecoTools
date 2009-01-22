@@ -16,8 +16,8 @@ process.source = cms.Source(
 
 
 # gen level analysis
-process.load("TauAnalysis.GenSim.gen_cff")
-process.load("TauAnalysis.GenSim.genDiTauReconstruction_cff")
+process.load("TauAnalysis.GenSimTools.gen_cff")
+process.load("TauAnalysis.GenSimTools.genDiTauReconstruction_cff")
 
 process.particleListDrawer.maxEventsToPrint = cms.untracked.int32(10)
 process.particleListDrawer.printOnlyHardInteraction = True
@@ -46,8 +46,8 @@ process.out = cms.OutputModule("PoolOutputModule",
 
 process.load("TauAnalysis.RecoTools.recoEventContent_cff")
 process.out.outputCommands.extend( process.TauAnalysisRecoToolsEC.outputCommands )
-process.load("TauAnalysis.GenSim.genEventContent_cff")
-process.out.outputCommands.extend( process.TauAnalysisGenSimEC.outputCommands )
+process.load("TauAnalysis.GenSimTools.genEventContent_cff")
+process.out.outputCommands.extend( process.TauAnalysisGenSimToolsEC.outputCommands )
 
 
 process.outpath = cms.EndPath( process.out )
