@@ -8,9 +8,9 @@
  * 
  * \author Christian Veelken, UC Davis
  *
- * \version $Revision: 1.10 $
+ * \version $Revision: 1.1 $
  *
- * $Id: TriggerResultEventSelector.h,v 1.10 2007/06/18 18:33:52 llista Exp $
+ * $Id: TriggerResultEventSelector.h,v 1.1 2009/01/22 16:30:03 veelken Exp $
  *
  */
 

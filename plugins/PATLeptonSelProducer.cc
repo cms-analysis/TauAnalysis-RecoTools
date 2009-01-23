@@ -1,8 +1,8 @@
 //
-// $Id: PATLeptonSelProducer.cc,v 1.1 2008/11/11 17:13:56 veelken Exp $
+// $Id: PATLeptonSelProducer.cc,v 1.1 2009/01/22 16:30:03 veelken Exp $
 //
 
-#include "TauAnalysis/RecoTools/interface/PATLeptonSelProducer.h"
+#include "TauAnalysis/RecoTools/plugins/PATLeptonSelProducer.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Utilities/interface/Exception.h"

@@ -1,5 +1,5 @@
 //
-// $Id: PATLeptonSelProducer.h,v 1.1 2008/11/11 17:13:56 veelken Exp $
+// $Id: PATLeptonSelProducer.h,v 1.1 2009/01/22 16:30:02 veelken Exp $
 //
 
 #ifndef TauAnalysis_RecoTools_PATLeptonSelProducer_h
@@ -13,7 +13,7 @@
    into pat::Electron/pat::Muon/pat::Tau objects
 
   \author   Christian Veelken
-  \version  $Id: PATLeptonSelProducer.h,v 1.1 2008/11/11 17:13:56 veelken Exp $
+  \version  $Id: PATLeptonSelProducer.h,v 1.1 2009/01/22 16:30:02 veelken Exp $
 */
 
 

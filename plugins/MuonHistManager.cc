@@ -1,4 +1,4 @@
-#include "TauAnalysis/RecoTools/interface/MuonHistManager.h"
+#include "TauAnalysis/RecoTools/plugins/MuonHistManager.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"

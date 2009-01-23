@@ -1,4 +1,4 @@
-#include "TauAnalysis/RecoTools/interface/ElecTauEventDump.h"
+#include "TauAnalysis/RecoTools/plugins/ElecTauEventDump.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 

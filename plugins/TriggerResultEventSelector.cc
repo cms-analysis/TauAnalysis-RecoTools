@@ -1,4 +1,4 @@
-#include "TauAnalysis/RecoTools/interface/TriggerResultEventSelector.h"
+#include "TauAnalysis/RecoTools/plugins/TriggerResultEventSelector.h"
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 #include "FWCore/Framework/interface/TriggerNames.h"

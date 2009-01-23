@@ -1,4 +1,4 @@
-#include "TauAnalysis/RecoTools/interface/PATObjectEventSelector.h"
+#include "TauAnalysis/RecoTools/plugins/PATObjectEventSelector.h"
 
 #include "PhysicsTools/UtilAlgos/interface/EventSelectorBase.h"
 

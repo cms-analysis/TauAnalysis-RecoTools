@@ -1,5 +1,5 @@
 //
-// $Id: PATObjectEventSelector.h,v 1.1 2008/03/06 09:23:10 llista Exp $
+// $Id: PATObjectEventSelector.h,v 1.1 2009/01/22 16:30:03 veelken Exp $
 //
 
 #ifndef TauAnalysis_RecoTools_PATObjectEventSelector_h

@@ -1,4 +1,4 @@
-#include "TauAnalysis/RecoTools/interface/GenericAnalyzer.h"
+#include "TauAnalysis/RecoTools/plugins/GenericAnalyzer.h"
 
 #include "TauAnalysis/DQMTools/interface/dqmAuxFunctions.h"
 #include "TauAnalysis/DQMTools/interface/generalAuxFunctions.h"
