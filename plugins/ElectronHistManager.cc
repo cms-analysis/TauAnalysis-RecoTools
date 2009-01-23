@@ -15,7 +15,7 @@ bool matchesGenElectron(const pat::Electron& patElectron)
   for ( std::vector<reco::GenParticleRef>::const_iterator it = patElectron.genParticleRefs().begin(); it != patElectron.genParticleRefs().end(); ++it ) {
     if ( it->ref().isNonnull() && it->ref().isValid() ) {
       const reco::GenParticleRef& genParticle = (*it);
-      if ( genParticle->pdgId() == -13 || genParticle->pdgId() == +13 ) isGenElectronMatched = true;
+      if ( genParticle->pdgId() == -11 || genParticle->pdgId() == +11 ) isGenElectronMatched = true;
     } else {
       edm::LogWarning("matchesGenElectron") << " edm::Ref of genParticle associated to pat::Electron is invalid !!";
     }
