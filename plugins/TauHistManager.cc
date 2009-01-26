@@ -151,12 +151,8 @@ void TauHistManager::fillTauIsoHistograms(const std::vector<pat::Tau>& patTaus)
     if ( requireGenTauMatch_ && (!matchesGenTau(*patTau)) ) continue;
 
     hTauTrkIsoPt_->Fill(patTau->trackIso());
-    if ( patTau->trackIso() == 0. ) {
-      hTauEcalIsoPt_->Fill(patTau->ecalIso());
-      if ( patTau->ecalIso() < 1. ) {
-        hTauHcalIsoPt_->Fill(patTau->hcalIso());
-      }
-    }
+    hTauEcalIsoPt_->Fill(patTau->ecalIso());
+    hTauHcalIsoPt_->Fill(patTau->hcalIso());
   }
 }
 
