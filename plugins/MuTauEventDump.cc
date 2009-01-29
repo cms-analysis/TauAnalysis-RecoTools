@@ -29,6 +29,9 @@ MuTauEventDump::MuTauEventDump(const edm::ParameterSet& cfg)
   genTauJetSrc_ = cfg.getParameter<edm::InputTag>("genTauJetSource");
   //std::cout << " genTauJetSrc = " << genTauJetSrc_ << std::endl;
 
+  electronSrc_ = cfg.getParameter<edm::InputTag>("electronSource");
+  //std::cout << " electronSrc = " << electronSrc_ << std::endl;
+
   muonSrc_ = cfg.getParameter<edm::InputTag>("muonSource");
   //std::cout << " muonSrc = " << muonSrc_ << std::endl;
 
@@ -68,6 +71,10 @@ void MuTauEventDump::print(const edm::Event& iEvent, const edm::EventSetup& iSet
   printGenParticleInfo(genParticleCollection, genTauJetCollection, outputStream_);
 
   *outputStream_ << ">>RECONSTRUCTION LEVEL INFORMATION<<" << std::endl;
+
+  edm::Handle<pat::ElectronCollection> electronCollection;
+  iEvent.getByLabel(electronSrc_, electronCollection);
+  printElectronInfo(electronCollection, outputStream_);
 
   edm::Handle<pat::MuonCollection> muonCollection;
   iEvent.getByLabel(muonSrc_, muonCollection);

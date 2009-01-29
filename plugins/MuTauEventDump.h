@@ -28,6 +28,7 @@ class MuTauEventDump : public EventDumpBase
 
   edm::InputTag genParticleSrc_;
   edm::InputTag genTauJetSrc_;
+  edm::InputTag electronSrc_;
   edm::InputTag muonSrc_;
   edm::InputTag tauSrc_;
   edm::InputTag metSrc_;
