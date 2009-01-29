@@ -156,19 +156,30 @@ void EventDumpBase::analyze(const edm::Event& iEvent, const edm::EventSetup& iSe
 {
   //std::cout << "<EventDumpBase::analyze>:" << std::endl;
 
-  bool triggerConditionFulfilled = false;
+  vstring triggerConditions_fulfilled;
   for ( std::map<std::string, vstring>::const_iterator filterEntry = triggerConditions_.begin();
 	filterEntry != triggerConditions_.end(); ++filterEntry ) {
     const std::string& filterName = filterEntry->first;
     for ( vstring::const_iterator triggerCondition = filterEntry->second.begin();
 	  triggerCondition != filterEntry->second.end(); ++triggerCondition ) {
-      if ( isFulfilled(filterName, *triggerCondition, filterResults_cumulative, filterResults_individual) ) triggerConditionFulfilled = true;
+      if ( isFulfilled(filterName, *triggerCondition, filterResults_cumulative, filterResults_individual) ) {
+	std::ostringstream triggerCondition_fulfilled;
+	triggerCondition_fulfilled << filterName << ":" << (*triggerCondition);
+	triggerConditions_fulfilled.push_back(triggerCondition_fulfilled.str());
+      }
     }
   }
 
-  //std::cout << " triggerConditionFulfilled = " << triggerConditionFulfilled << std::endl;
-
-  if ( triggerConditionFulfilled ) print(iEvent, iSetup, filterResults_cumulative, filterResults_individual, eventWeight);
+  if ( triggerConditions_fulfilled.size() >= 1 ) {
+    *outputStream_ << ">>CONDITIONS TRIGGERING EVENT PRINT-OUT<<" << std::endl;
+    for ( vstring::const_iterator triggerCondition_fulfilled = triggerConditions_fulfilled.begin();
+	  triggerCondition_fulfilled != triggerConditions_fulfilled.end(); ++triggerCondition_fulfilled ) {
+      *outputStream_ << " " << (*triggerCondition_fulfilled) << std::endl;
+    }
+    *outputStream_ << std::endl;
+    
+    print(iEvent, iSetup, filterResults_cumulative, filterResults_individual, eventWeight);
+  }
 }
 
 #include "FWCore/Framework/interface/MakerMacros.h"
