@@ -259,7 +259,7 @@ void printElectronInfo(edm::Handle<pat::ElectronCollection>& patElectrons, std::
 	patElectron != patElectrons->end(); ++patElectron ) {
     *stream << "Electron(" << iElectron << "):" << std::endl;
     *stream << " Pt = " << patElectron->pt() << std::endl;
-    *stream << " theta = " << patElectron->theta()*180./TMath::Pi() << std::endl;
+    *stream << " theta = " << patElectron->theta()*180./TMath::Pi() << " (eta = " << patElectron->eta() << ")" << std::endl;
     *stream << " phi = " << patElectron->phi()*180./TMath::Pi() << std::endl;
     *stream << " Track" << std::endl;
     printTrackInfo(edm::RefToBase<reco::Track>(patElectron->track()), stream);
@@ -289,7 +289,7 @@ void printMuonInfo(edm::Handle<pat::MuonCollection>& patMuons, std::ostream* str
 	patMuon != patMuons->end(); ++patMuon ) {
     *stream << "Muon(" << iMuon << "):" << std::endl;
     *stream << " Pt = " << patMuon->pt() << std::endl;
-    *stream << " theta = " << patMuon->theta()*180./TMath::Pi() << std::endl;
+    *stream << " theta = " << patMuon->theta()*180./TMath::Pi() << " (eta = " << patMuon->eta() << ")" << std::endl;
     *stream << " phi = " << patMuon->phi()*180./TMath::Pi() << std::endl;
     *stream << " inner Track" << std::endl;
     printTrackInfo(edm::RefToBase<reco::Track>(patMuon->innerTrack()), stream);
@@ -330,10 +330,16 @@ void printTauInfo(edm::Handle<pat::TauCollection>& patTaus, std::ostream* stream
 	patTau != patTaus->end(); ++patTau ) {
     *stream << "Tau(" << iTau << "):" << std::endl;
     *stream << " Et = " << patTau->et() << std::endl;
-    *stream << " theta = " << patTau->theta()*180./TMath::Pi() << std::endl;
+    *stream << " theta = " << patTau->theta()*180./TMath::Pi() << " (eta = " << patTau->eta() << ")" << std::endl;
     *stream << " phi = " << patTau->phi()*180./TMath::Pi() << std::endl;
     *stream << " leading Track" << std::endl;
     printTrackInfo(edm::RefToBase<reco::Track>(patTau->leadTrack()), stream);
+    *stream << " #signal Tracks = " << patTau->signalTracks().size() << std::endl;
+    *stream << " tauId" << std::endl;
+    *stream << "  leadingTrackFinding = " << patTau->tauID("leadingTrackFinding") << std::endl;
+    *stream << "  leadingTrackPtCut = " << patTau->tauID("leadingTrackPtCut") << std::endl;
+    *stream << "  trackIsolation = " << patTau->tauID("trackIsolation") << std::endl;
+    *stream << "  ecalIsolation = " << patTau->tauID("ecalIsolation") << std::endl;
     *stream << " eVeto = " << patTau->tauID("againstElectron") << std::endl;
     *stream << " muVeto = " << patTau->tauID("againstMuon") << std::endl;
     *stream << " vertex" << std::endl;
