@@ -168,10 +168,15 @@ void TauHistManager::fillTauIsoConeSizeDepHistograms(const std::vector<pat::Tau>
     if ( !patTau->trackerIsoDeposit() ||
 	 !patTau->ecalIsoDeposit()    ||
 	 !patTau->hcalIsoDeposit() ) {
+/*
+ CV: IsoDeposits are not computed for pat::Taus in CMSSW_2_2_3 yet
+   --> no need to print-out this warning for each event !!
+
       edm::LogError ("TauHistManager::fillTauIsoConeSizeDepHistograms") << " No IsoDeposits associated to pat::Tau with"
 									<< " E = " << patTau->energy() << ","
 									<< " theta = " << patTau->theta()*180./TMath::Pi() << "," 
 									<< " phi = " << patTau->phi()*180./TMath::Pi() << " !!";
+ */
       continue;
     }
 
