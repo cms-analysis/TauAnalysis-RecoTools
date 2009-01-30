@@ -22,10 +22,10 @@ allLayer1ElectronsForTauAnalyses.embedSuperCluster = cms.bool(False)
 allLayer1ElectronsForTauAnalyses.isolation = cms.PSet(
    tracker = cms.PSet(
       src = cms.InputTag("layer0ElectronIsolations","eleIsoDepositForTauAnalysesTk"),
-      deltaR = cms.double(0.6),
+      deltaR = cms.double(0.7),
       vetos = cms.vstring(
-         '0.02', # inner radius veto cone (was 0.015)
-         'Threshold(1.0)' # threshold on individual track pt
+         '0.015', # inner radius veto cone (was 0.015)
+         'Threshold(0.3)' # threshold on individual track pt
       ),       
       skipDefaultVeto = cms.bool(True),
    ),
@@ -33,11 +33,11 @@ allLayer1ElectronsForTauAnalyses.isolation = cms.PSet(
       src = cms.InputTag("layer0ElectronIsolations","eleIsoDepositForTauAnalysesEcalFromHits"),
       deltaR = cms.double(0.6),
       vetos = cms.vstring(
-         'EcalBarrel:0.040', 
+         'EcalBarrel:0.045', 
          'EcalBarrel:RectangularEtaPhiVeto(-0.02,0.02,-0.5,0.5)',
-         'EcalEndcaps:0.070',
-         'EcalEndcaps:RectangularEtaPhiVeto(-0.02,0.02,-0.5,0.5)',
-         'EcalBarrel:ThresholdFromTransverse(0.08)',
+         'EcalEndcaps:0.01',#0.07
+         'EcalEndcaps:RectangularEtaPhiVeto(-0.05,0.05,-0.5,0.5)',
+         'EcalBarrel:ThresholdFromTransverse(0.12)', #0.08
          'EcalEndcaps:ThresholdFromTransverse(0.3)'
       ),
       skipDefaultVeto = cms.bool(True),
@@ -64,7 +64,7 @@ allLayer1ElectronsForTauAnalyses.trigPrimMatch = cms.VInputTag(
    cms.InputTag("electronTrigMatchHLT1Electron"),
    #cms.InputTag("electronTrigMatchHLT1ElectronRelaxed"), 
 )
-allLayer1ElectronsForTauAnalyses.addGenMatch = cms.bool(False)
+allLayer1ElectronsForTauAnalyses.addGenMatch = cms.bool(True)
 allLayer1ElectronsForTauAnalyses.embedGenMatch    = cms.bool(False)
 allLayer1ElectronsForTauAnalyses.genParticleMatch = cms.InputTag("electronMatch")
 

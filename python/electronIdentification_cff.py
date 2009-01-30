@@ -15,6 +15,13 @@ elecIdForTauAnalysesCutBasedExtPAT.src = cms.InputTag("allLayer0ElectronsForTauA
 
 elecIdForTauAnalysesCutBasedRobust = elecIdForTauAnalysesCutBasedExtPAT.copy();
 elecIdForTauAnalysesCutBasedRobust.electronQuality = 'robust'
+elecIdForTauAnalysesCutBasedRobust.robustEleIDCuts = cms.PSet(
+   barrel = cms.vdouble(0.015, 0.012, 0.02, 0.0025),
+   endcap = cms.vdouble(0.018, 0.025, 0.02, 0.0040)
+)
+
+#barrel = cms.vdouble(0.015, 0.0092, 0.02, 0.0025),
+#endcap = cms.vdouble(0.018, 0.025, 0.02, 0.0040)
 
 elecIdForTauAnalysesCutBasedLoose  = elecIdForTauAnalysesCutBasedExtPAT.copy();
 elecIdForTauAnalysesCutBasedLoose.electronQuality  = 'loose'

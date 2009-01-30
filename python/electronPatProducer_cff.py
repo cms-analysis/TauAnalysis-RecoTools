@@ -9,6 +9,9 @@ electronTrigMatchCandHLT1ElectronStartup.src = "allLayer0ElectronsForTauAnalyses
 electronTrigMatchHLT1Electron.src = "allLayer0ElectronsForTauAnalyses"
 electronTrigMatchHLT1ElectronRelaxed.src = "allLayer0ElectronsForTauAnalyses"
 
+from PhysicsTools.PatAlgos.mcMatchLayer0.electronMatch_cfi import *
+electronMatch.maxDeltaR = cms.double(0.1)
+
 patTrigMatchElectronsForTauAnalyses = cms.Sequence( (patCandHLT1ElectronStartup * electronTrigMatchCandHLT1ElectronStartup)
 	                                           +(patHLT1ElectronRelaxed * electronTrigMatchHLT1ElectronRelaxed)
                                                    +(patHLT1Electron * electronTrigMatchHLT1Electron) )
