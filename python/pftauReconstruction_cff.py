@@ -43,6 +43,7 @@ pfRecoTauProducerForTauAnalyses.ECALIsolConeSizeFormula = "0.50"
 pfRecoTauProducerForTauAnalyses.ECALIsolConeSize_max = "1.0"
 pfRecoTauProducerForTauAnalyses.ECALIsolConeSize_min = "0.0"
 pfRecoTauProducerForTauAnalyses.GammaCand_minPt = 1.5
+pfRecoTauProducerForTauAnalyses.DataType = cms.string("AOD")
 
 ### Discriminators ###
 pfRecoTauLdgTrkFindForTauAnalyses = copy.deepcopy(pfRecoTauDiscriminationByLeadingTrackFinding)
