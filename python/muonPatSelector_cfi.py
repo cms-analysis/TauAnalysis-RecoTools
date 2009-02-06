@@ -79,7 +79,7 @@ selectedLayer1MuonsHcalIsoIndividual = copy.deepcopy(selectedLayer1MuonsHcalIsoC
 selectedLayer1MuonsHcalIsoIndividual.src = selectedLayer1MuonsGlobal.src
 
 # require muon candidate to pass pion veto
-selectedLayer1MuonsPionVetoCumulative = cms.EDProducer("PATMuonAntiPionSelection",
+selectedLayer1MuonsPionVetoCumulative = cms.EDProducer("PATMuonAntiPionSelector",
      src = cms.InputTag("selectedLayer1MuonsHcalIsoCumulative"),
      CaloCompCoefficient = cms.double(0.8),
      SegmCompCoefficient = cms.double(1.2),
@@ -105,10 +105,11 @@ selectedLayer1MuonsTrkIndividual.src = selectedLayer1MuonsGlobal.src
 
 # require track of muon candidate to have small transverse impact parameter
 # (in order to veto muons resulting from b-quark decays)
-selectedLayer1MuonsTrkIPcumulative = cms.EDProducer("PATMuonSelector",
+selectedLayer1MuonsTrkIPcumulative = cms.EDProducer("PATMuonIpSelector",
      src = cms.InputTag("selectedLayer1MuonsTrkCumulative"),
-     cut = cms.string('innerTrack.isNonnull & abs(innerTrack.d0) < 0.05'),
-     filter = cms.bool(False)
+     vertexSource = cms.InputTag("selectedPrimaryVertexPosition"),
+     IpMax = cms.double(0.05),
+     filter = cms.bool(False)                                               
 )
 
 selectedLayer1MuonsTrkIPindividual = copy.deepcopy(selectedLayer1MuonsTrkIPcumulative)

@@ -99,10 +99,11 @@ selectedLayer1ElectronsTrkIndividual.src = selectedLayer1ElectronsTightId.src
 
 # require track of electron candidate to have small transverse impact parameter
 # (in order to veto electrons resulting from b-quark decays)
-selectedLayer1ElectronsTrkIPcumulative = cms.EDProducer("PATElectronSelector",
+selectedLayer1ElectronsTrkIPcumulative = cms.EDProducer("PATElectronIpSelector",
      src = cms.InputTag("selectedLayer1ElectronsTrkCumulative"),
-     cut = cms.string('abs(gsfTrack.d0) < 0.05'),
-     filter = cms.bool(False)
+     vertexSource = cms.InputTag("selectedPrimaryVertexPosition"),
+     IpMax = cms.double(0.05),
+     filter = cms.bool(False)                                               
 )
 
 selectedLayer1ElectronsTrkIPindividual = copy.deepcopy(selectedLayer1ElectronsTrkIPcumulative)
