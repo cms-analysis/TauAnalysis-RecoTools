@@ -1,5 +1,5 @@
 //
-// $Id: PATLeptonSelProducer.h,v 1.1 2009/01/22 16:30:02 veelken Exp $
+// $Id: PATLeptonSelProducer.h,v 1.1 2009/01/23 14:58:11 veelken Exp $
 //
 
 #ifndef TauAnalysis_RecoTools_PATLeptonSelProducer_h
@@ -13,9 +13,8 @@
    into pat::Electron/pat::Muon/pat::Tau objects
 
   \author   Christian Veelken
-  \version  $Id: PATLeptonSelProducer.h,v 1.1 2009/01/22 16:30:02 veelken Exp $
+  \version  $Id: PATLeptonSelProducer.h,v 1.1 2009/01/23 14:58:11 veelken Exp $
 */
-
 
 #include "FWCore/Framework/interface/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
@@ -45,9 +44,5 @@ class PATLeptonSelProducer : public edm::EDProducer {
     typedef std::pair<edm::InputTag, std::string> selFlagEntry;
     std::vector<selFlagEntry> selFlags_;
 };
-
-typedef PATLeptonSelProducer<pat::Electron> PATElectronSelProducer;
-typedef PATLeptonSelProducer<pat::Muon> PATMuonSelProducer;
-typedef PATLeptonSelProducer<pat::Tau> PATTauSelProducer;
 
 #endif

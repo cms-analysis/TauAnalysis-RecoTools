@@ -1,5 +1,5 @@
 //
-// $Id: PATLeptonSelProducer.cc,v 1.1 2009/01/22 16:30:03 veelken Exp $
+// $Id: PATLeptonSelProducer.cc,v 1.1 2009/01/23 14:58:11 veelken Exp $
 //
 
 #include "TauAnalysis/RecoTools/plugins/PATLeptonSelProducer.h"
@@ -89,6 +89,10 @@ void PATLeptonSelProducer<T>::produce(edm::Event & iEvent, const edm::EventSetup
   std::auto_ptr<patLeptonCollection> ptr(patLeptonOutputCollection);
   iEvent.put(ptr);
 }
+
+typedef PATLeptonSelProducer<pat::Electron> PATElectronSelProducer;
+typedef PATLeptonSelProducer<pat::Muon> PATMuonSelProducer;
+typedef PATLeptonSelProducer<pat::Tau> PATTauSelProducer;
 
 #include "FWCore/Framework/interface/MakerMacros.h"
 
