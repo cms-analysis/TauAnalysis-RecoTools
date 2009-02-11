@@ -3,6 +3,10 @@ import copy
 
 from PhysicsTools.PatAlgos.producersLayer1.tauProducer_cfi import * 
 
+from PhysicsTools.PatAlgos.mcMatchLayer0.tauMatch_cfi import *
+tauMatch.src = "allLayer0PFTausForTauAnalyses" # matching of recontructed tau-jets to generator level information
+tauGenJetMatch.src = "allLayer0PFTausForTauAnalyses"
+
 #####################  PAT LAYER 0  #########################
 
 allLayer0PFTausForTauAnalyses = cms.EDFilter("PATPFTauCleaner",
@@ -46,5 +50,5 @@ allLayer1PFTausForTauAnalyses.tauIDSources = cms.PSet(
     againstMuon = cms.InputTag("pfRecoTauMuonRejDiscrForTauAnalyses")
 )
 allLayer1PFTausForTauAnalyses.addTrigMatch = False
-allLayer1PFTausForTauAnalyses.addGenMatch = False
-allLayer1PFTausForTauAnalyses.addGenJetMatch = False
+allLayer1PFTausForTauAnalyses.addGenMatch = True
+allLayer1PFTausForTauAnalyses.addGenJetMatch = True
