@@ -8,7 +8,7 @@ import copy
 # require electron candidate to pass the tight electron id. criteria
 selectedLayer1ElectronsTightId = cms.EDFilter("PATElectronSelector",
      src = cms.InputTag("allLayer1ElectronsForTauAnalyses"),
-     cut = cms.string('(abs(superCluster.eta)<1.479 & electronID("robust")>0 & eSuperClusterOverP<1.05 & eSuperClusterOverP>0.95) | (abs(superCluster.eta)>1.479 & electronID("robust")>0 & eSuperClusterOverP<1.12 & eSuperClusterOverP>0.95)'),
+     cut = cms.string('(abs(superCluster.eta) < 1.479 & electronID("robust") > 0 & eSuperClusterOverP < 1.05 & eSuperClusterOverP > 0.95) | (abs(superCluster.eta) > 1.479 & electronID("robust") > 0 & eSuperClusterOverP < 1.12 & eSuperClusterOverP > 0.95)'),
      filter = cms.bool(False)
 )
 
@@ -16,7 +16,7 @@ selectedLayer1ElectronsTightId = cms.EDFilter("PATElectronSelector",
 # between Barrel and Encap ECAL calorimeter
 selectedLayer1ElectronsAntiCrackCutCumulative = cms.EDFilter("PATElectronSelector",
      src = cms.InputTag("selectedLayer1ElectronsTightId"),
-     cut = cms.string('abs(superCluster.eta) < 1.442 || abs(superCluster.eta) > 1.560'),
+     cut = cms.string('abs(superCluster.eta) < 1.442 | abs(superCluster.eta) > 1.560'),
      filter = cms.bool(False)
 )
 
@@ -69,7 +69,7 @@ selectedLayer1ElectronsTrkIsoIndividual.src = selectedLayer1ElectronsTightId.src
 # (not associated to electron candidate)
 selectedLayer1ElectronsEcalIsoCumulative = cms.EDFilter("PATElectronSelector",
      src = cms.InputTag("selectedLayer1ElectronsTrkIsoCumulative"),
-     cut = cms.string('(abs(superCluster.eta)<1.479&ecalIso<1.0) | (abs(superCluster.eta)>1.479&ecalIso<2.5)'),
+     cut = cms.string('(abs(superCluster.eta) < 1.479 & ecalIso < 1.0) | (abs(superCluster.eta) > 1.479 & ecalIso < 2.5)'),
      filter = cms.bool(False)
 )
 

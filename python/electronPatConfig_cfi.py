@@ -55,9 +55,9 @@ allLayer1ElectronsForTauAnalyses.isoDeposits = cms.PSet(
 )
 allLayer1ElectronsForTauAnalyses.addElectronID = cms.bool(True)
 allLayer1ElectronsForTauAnalyses.electronIDSources = cms.PSet(
-   robust     = cms.InputTag("elecIdForTauAnalysesCutBasedRobust"),
-   loose      = cms.InputTag("elecIdForTauAnalysesCutBasedLoose"),
-   tight      = cms.InputTag("elecIdForTauAnalysesCutBasedTight"),        
+   robust = cms.InputTag("elecIdForTauAnalysesCutBasedRobust"),
+   loose  = cms.InputTag("elecIdForTauAnalysesCutBasedLoose"),
+   tight  = cms.InputTag("elecIdForTauAnalysesCutBasedTight"),        
 )
 allLayer1ElectronsForTauAnalyses.addTrigMatch = cms.bool(True)
 allLayer1ElectronsForTauAnalyses.trigPrimMatch = cms.VInputTag(

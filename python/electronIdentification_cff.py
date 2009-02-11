@@ -23,11 +23,11 @@ elecIdForTauAnalysesCutBasedRobust.robustEleIDCuts = cms.PSet(
 #barrel = cms.vdouble(0.015, 0.0092, 0.02, 0.0025),
 #endcap = cms.vdouble(0.018, 0.025, 0.02, 0.0040)
 
-elecIdForTauAnalysesCutBasedLoose  = elecIdForTauAnalysesCutBasedExtPAT.copy();
-elecIdForTauAnalysesCutBasedLoose.electronQuality  = 'loose'
+elecIdForTauAnalysesCutBasedLoose = elecIdForTauAnalysesCutBasedExtPAT.copy();
+elecIdForTauAnalysesCutBasedLoose.electronQuality = 'loose'
 
-elecIdForTauAnalysesCutBasedTight  = elecIdForTauAnalysesCutBasedExtPAT.copy();
-elecIdForTauAnalysesCutBasedTight.electronQuality  = 'tight'
+elecIdForTauAnalysesCutBasedTight = elecIdForTauAnalysesCutBasedExtPAT.copy();
+elecIdForTauAnalysesCutBasedTight.electronQuality = 'tight'
 
 patLayer0ElectronId = cms.Sequence( elecIdForTauAnalysesCutBasedRobust
                                    *elecIdForTauAnalysesCutBasedLoose
