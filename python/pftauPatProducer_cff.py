@@ -4,8 +4,6 @@ import copy
 from TauAnalysis.RecoTools.pftauReconstruction_cff import *
 from TauAnalysis.RecoTools.pftauPatConfig_cfi import *
 from TauAnalysis.RecoTools.pftauPatSelector_cfi import *
-from TauAnalysis.RecoTools.pftauPatSelectorForElecTau_cfi import *
-from TauAnalysis.RecoTools.pftauPatSelectorForMuTau_cfi import *
 
 allLayer1PFTausSelForTauAnalyses = cms.EDProducer("PATTauSelProducer",
 
@@ -55,8 +53,6 @@ producePFTausForTauAnalyses = cms.Sequence( pfRecoTauProducerForTauAnalyses
                                            *pfRecoTauMuonRejDiscrForTauAnalyses
                                            *allLayer1PFTausForTauAnalyses
                                            *selectPFTausForTauAnalyses
-                                           *selectPFTausForElecTau
-                                           *selectPFTausForMuTau
                                            *allLayer1PFTausSelForTauAnalyses )
 
 
