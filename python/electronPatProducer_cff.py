@@ -3,6 +3,7 @@ from TauAnalysis.RecoTools.electronPatSelector_cfi import *
 from TauAnalysis.RecoTools.electronAntiIsoPatSelector_cfi import *
 from TauAnalysis.RecoTools.electronIdentification_cff import *
 from TauAnalysis.RecoTools.electronIsolation_cff import *
+#from TauAnalysis.RecoTools.electronIsolationFamos_cff import *
 
 from PhysicsTools.PatAlgos.triggerLayer0.trigMatchSequences_cff import *
 electronTrigMatchCandHLT1ElectronStartup.src = "allLayer0ElectronsForTauAnalyses"
