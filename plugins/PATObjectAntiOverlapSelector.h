@@ -12,7 +12,7 @@
  *
  * \version $Revision: 1.1 $
  *
- * $Id: PATObjectAntiOverlapSelector.h,v 1.1 2009/01/28 15:59:22 veelken Exp $
+ * $Id: PATObjectAntiOverlapSelector.h,v 1.1 2009/01/29 13:22:18 veelken Exp $
  *
  */
 
@@ -42,7 +42,8 @@ class PATObjectAntiOverlapSelector
  private:
   std::vector<const T*> selected_;
 
-  edm::InputTag srcNotToBeFiltered_;
+  typedef std::vector<edm::InputTag> vInputTag;
+  vInputTag srcNotToBeFiltered_;
 
   double dRmin_;
 };
