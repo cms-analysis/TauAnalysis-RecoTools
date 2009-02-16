@@ -8,7 +8,7 @@ from TauAnalysis.RecoTools.pftauPatSelector_cfi import *
 #  as electron and as tau candidate)
 selectedLayer1TausForElecTauAntiOverlapWithElectronsVeto = cms.EDFilter("PATTauAntiOverlapSelector",
      src = cms.InputTag("allLayer1PFTausForTauAnalyses"),
-     srcNotToBeFiltered = cms.InputTag("selectedLayer1ElectronsTrkIPcumulative"),
+     srcNotToBeFiltered = cms.VInputTag("selectedLayer1ElectronsTrkIPcumulative"),
      dRmin = cms.double(0.3),
      filter = cms.bool(False)                                           
 )
