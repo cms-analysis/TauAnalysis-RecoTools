@@ -90,7 +90,7 @@ layer0ElectronIsolations = cms.EDFilter("CandManyValueMapsSkimmerIsoDeposits",
     collection   = cms.InputTag("allLayer0ElectronsForTauAnalyses"),
     backrefs     = cms.InputTag("allLayer0ElectronsForTauAnalyses"),
     commonLabel  = cms.InputTag("patAODElectronIsolations"),
-    associations = patAODElectronIsolationLabels,
+    associations = patAODElectronIsolationLabels
 )
 
 # selecting POG modules that can run on top of AOD
@@ -98,14 +98,15 @@ eleIsoDepositAOD = cms.Sequence(
     eleIsoDepositForTauAnalysesTk * eleIsoDepositForTauAnalysesEcalFromClusts * eleIsoDepositForTauAnalysesEcalFromHits *
     eleIsoDepositForTauAnalysesHcalFromTowers * eleIsoDepositForTauAnalysesHcalFromHits *
     eleIsoDepositForTauAnalysesEcalSCVetoFromClusts
-    )
+)
 
 # sequence to run on AOD before PAT
 patAODElectronIsolation = cms.Sequence(
         egammaSuperClusterMerger *  ## 
         egammaBasicClusterMerger *  ## 
         eleIsoDepositAOD *          ## Not needed any more, we use values from RECO
-        patAODElectronIsolations)
+        patAODElectronIsolations
+)
 
 # sequence to run after the PAT cleaners
 patLayer0ElectronIsolation = cms.Sequence(layer0ElectronIsolations)
