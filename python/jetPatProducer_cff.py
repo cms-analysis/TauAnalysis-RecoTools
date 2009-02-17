@@ -9,6 +9,8 @@ allLayer0Jets.removeOverlaps.electrons.collection = cms.InputTag("allLayer0Elect
 allLayer1Jets.addTrigMatch = cms.bool(False)
 allLayer1Jets.jetCorrFactorsSource = cms.InputTag("layer0JetCorrFactors")
 
+from TauAnalysis.RecoTools.jetPatSelector_cfi import *
+
 patLayer0JetsForTauAnalyses = cms.Sequence( allLayer0Jets
                                            *patAODBTagging
                                            *patJetFlavourId
@@ -20,4 +22,4 @@ patLayer0JetsForTauAnalyses = cms.Sequence( allLayer0Jets
 
 patLayer1JetsForTauAnalyses = cms.Sequence(allLayer1Jets)
 
-produceJetsForTauAnalyses = cms.Sequence(patLayer0JetsForTauAnalyses + patLayer1JetsForTauAnalyses)
+produceJetsForTauAnalyses = cms.Sequence((patLayer0JetsForTauAnalyses + patLayer1JetsForTauAnalyses) * selectJetsForTauAnalyses)
