@@ -42,7 +42,10 @@ allLayer1PFTausSelForTauAnalyses = cms.EDProducer("PATTauSelProducer",
 
 producePFTausForTauAnalyses = cms.Sequence( pfRecoTauProducerForTauAnalyses
                                            *pfRecoTauIsoDiscrForTauAnalyses
+                                           *patPFTauIsolationForTauAnalyses
+                                           *patAODPFTauIsolationForTauAnalyses
                                            *allLayer0PFTausForTauAnalyses
+                                           *patLayer0PFTauIsolationForTauAnalyses 
                                            *tauMatch
                                            *tauGenJetMatch
                                            *pfRecoTauLdgTrkFindForTauAnalyses
