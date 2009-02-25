@@ -9,6 +9,7 @@
   <use name=DataFormats/Common>
   <use name=DataFormats/MuonReco>
   <use name=DataFormats/PatCandidates>
+  <use name=PhysicsTools/IsolationAlgos>
   <use name=PhysicsTools/PatUtils>
   <use name=PhysicsTools/UtilAlgos>
   <use name=PhysicsTools/Utilities>
