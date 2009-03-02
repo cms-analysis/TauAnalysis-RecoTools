@@ -66,21 +66,9 @@ selectedLayer1MuonsEcalIsoCumulative = cms.EDFilter("PATMuonSelector",
 selectedLayer1MuonsEcalIsoIndividual = copy.deepcopy(selectedLayer1MuonsEcalIsoCumulative)
 selectedLayer1MuonsEcalIsoIndividual.src = selectedLayer1MuonsGlobal.src
 
-# require muon candidate to be isolated
-# with respect to energy deposits in HCAL
-# (not associated to muon candidate)
-selectedLayer1MuonsHcalIsoCumulative = cms.EDFilter("PATMuonSelector",
-     src = cms.InputTag("selectedLayer1MuonsEcalIsoCumulative"),
-     cut = cms.string('hcalIso < 2.5'),
-     filter = cms.bool(False)
-)
-
-selectedLayer1MuonsHcalIsoIndividual = copy.deepcopy(selectedLayer1MuonsHcalIsoCumulative)
-selectedLayer1MuonsHcalIsoIndividual.src = selectedLayer1MuonsGlobal.src
-
 # require muon candidate to pass pion veto
 selectedLayer1MuonsPionVetoCumulative = cms.EDProducer("PATMuonAntiPionSelector",
-     src = cms.InputTag("selectedLayer1MuonsHcalIsoCumulative"),
+     src = cms.InputTag("selectedLayer1MuonsEcalIsoCumulative"),
      CaloCompCoefficient = cms.double(0.8),
      SegmCompCoefficient = cms.double(1.2),
      AntiPionCut = cms.double(1.0),
@@ -121,7 +109,6 @@ selectMuonsForTauAnalyses = cms.Sequence( selectedLayer1MuonsGlobal
                                          *selectedLayer1MuonsHLTmatchCumulative * selectedLayer1MuonsHLTmatchIndividual
                                          *selectedLayer1MuonsTrkIsoCumulative * selectedLayer1MuonsTrkIsoIndividual
                                          *selectedLayer1MuonsEcalIsoCumulative * selectedLayer1MuonsEcalIsoIndividual
-                                         *selectedLayer1MuonsHcalIsoCumulative * selectedLayer1MuonsHcalIsoIndividual
                                          *selectedLayer1MuonsPionVetoCumulative * selectedLayer1MuonsPionVetoIndividual
                                          *selectedLayer1MuonsTrkCumulative * selectedLayer1MuonsTrkIndividual
                                          *selectedLayer1MuonsTrkIPcumulative * selectedLayer1MuonsTrkIPindividual )

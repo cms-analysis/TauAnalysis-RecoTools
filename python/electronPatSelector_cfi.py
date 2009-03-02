@@ -78,21 +78,9 @@ selectedLayer1ElectronsEcalIsoCumulative = cms.EDFilter("PATElectronSelector",
 selectedLayer1ElectronsEcalIsoIndividual = copy.deepcopy(selectedLayer1ElectronsEcalIsoCumulative)
 selectedLayer1ElectronsEcalIsoIndividual.src = selectedLayer1ElectronsTightId.src
 
-# require electron candidate to be isolated
-# with respect to energy deposits in HCAL
-selectedLayer1ElectronsHcalIsoCumulative = cms.EDFilter("PATElectronSelector",
-     src = cms.InputTag("selectedLayer1ElectronsEcalIsoCumulative"),
-     cut = cms.string('hcalIso < 1.5'),
-     #cut = cms.string('hcalIsoDeposit.depositWithin(0.6) < 1.5'),                 
-     filter = cms.bool(False)
-)
-
-selectedLayer1ElectronsHcalIsoIndividual = copy.deepcopy(selectedLayer1ElectronsHcalIsoCumulative)
-selectedLayer1ElectronsHcalIsoIndividual.src = selectedLayer1ElectronsTightId.src
-
 # require electron candidate to be linked to (GSF) track
 selectedLayer1ElectronsTrkCumulative = cms.EDFilter("PATElectronSelector",
-     src = cms.InputTag("selectedLayer1ElectronsHcalIsoCumulative"),
+     src = cms.InputTag("selectedLayer1ElectronsEcalIsoCumulative"),
      cut = cms.string('gsfTrack.isNonnull'),
      filter = cms.bool(False)
 )
@@ -119,6 +107,5 @@ selectElectronsForTauAnalyses = cms.Sequence( selectedLayer1ElectronsTightId
                                              *selectedLayer1ElectronsHLTmatchCumulative * selectedLayer1ElectronsHLTmatchIndividual
                                              *selectedLayer1ElectronsTrkIsoCumulative * selectedLayer1ElectronsTrkIsoIndividual
                                              *selectedLayer1ElectronsEcalIsoCumulative * selectedLayer1ElectronsEcalIsoIndividual
-                                             *selectedLayer1ElectronsHcalIsoCumulative * selectedLayer1ElectronsHcalIsoIndividual
                                              *selectedLayer1ElectronsTrkCumulative * selectedLayer1ElectronsTrkIndividual
                                              *selectedLayer1ElectronsTrkIPcumulative * selectedLayer1ElectronsTrkIPindividual )
