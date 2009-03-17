@@ -54,11 +54,21 @@ selectedLayer1ElectronsHLTmatchIndividual = copy.deepcopy(selectedLayer1Electron
 selectedLayer1ElectronsHLTmatchIndividual.src = selectedLayer1ElectronsTightId.src
 
 # require electron candidate to be isolated
-# with respect to tracks (of Pt > .3 GeV)
-selectedLayer1ElectronsTrkIsoCumulative = cms.EDFilter("PATElectronSelector",
+# with respect to tracks (of Pt >~ 0.3 GeV)
+#selectedLayer1ElectronsTrkIsoCumulative = cms.EDFilter("PATElectronSelector",
+#     src = cms.InputTag("selectedLayer1ElectronsHLTmatchCumulative"),
+#     cut = cms.string('trackIso < 0.9'),
+#     filter = cms.bool(False)
+#)
+
+selectedLayer1ElectronsTrkIsoCumulative = cms.EDFilter("PATElectronIsoDepositSelector",
      src = cms.InputTag("selectedLayer1ElectronsHLTmatchCumulative"),
-     cut = cms.string('trackIso <0.9'),
-     #cut = cms.string('trackerIsoDeposit.depositWithin(0.6) < 0.9'),
+     type = cms.string('tracker'),
+     #vetos = cms.vstring("0.015", "Threshold(0.9)"),
+     vetos = cms.vstring("0.015"),                       
+     dRisoCone = cms.double(0.6),
+     #numMax = cms.int32(0),
+     sumPtMax = cms.double(0.9),
      filter = cms.bool(False)
 )
 
@@ -71,7 +81,6 @@ selectedLayer1ElectronsTrkIsoIndividual.src = selectedLayer1ElectronsTightId.src
 selectedLayer1ElectronsEcalIsoCumulative = cms.EDFilter("PATElectronSelector",
      src = cms.InputTag("selectedLayer1ElectronsTrkIsoCumulative"),
      cut = cms.string('(abs(superCluster.eta) < 1.479 & ecalIso < 1.0) | (abs(superCluster.eta) > 1.479 & ecalIso < 2.5)'),
-     #cut = cms.string('(abs(superCluster.eta) < 1.479 & ecalIsoDeposit.depositWithin(0.6) < 1.0) | (abs(superCluster.eta) > 1.479 & ecalIsoDeposit.depositWithin(0.6) < 2.5)'),
      filter = cms.bool(False)
 )
 
