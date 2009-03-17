@@ -45,9 +45,20 @@ selectedLayer1MuonsHLTmatchIndividual.src = selectedLayer1MuonsGlobal.src
 
 # require muon candidate to be isolated
 # with respect to tracks (of Pt > 1. GeV)
-selectedLayer1MuonsTrkIsoCumulative = cms.EDFilter("PATMuonSelector",
+#selectedLayer1MuonsTrkIsoCumulative = cms.EDFilter("PATMuonSelector",
+#     src = cms.InputTag("selectedLayer1MuonsHLTmatchCumulative"),
+#     cut = cms.string('trackIso = 0.'),
+#     filter = cms.bool(False)
+#)
+
+selectedLayer1MuonsTrkIsoCumulative = cms.EDFilter("PATMuonIsoDepositSelector",
      src = cms.InputTag("selectedLayer1MuonsHLTmatchCumulative"),
-     cut = cms.string('trackIso = 0.'),
+     type = cms.string('tracker'),
+     vetos = cms.vstring("0.01", "Threshold(0.9)"),
+     #vetos = cms.vstring("0.01"),                          
+     dRisoCone = cms.double(0.6),
+     numMax = cms.int32(0),
+     #sumPtMax = cms.double(0.9),
      filter = cms.bool(False)
 )
 
@@ -112,3 +123,53 @@ selectMuonsForTauAnalyses = cms.Sequence( selectedLayer1MuonsGlobal
                                          *selectedLayer1MuonsPionVetoCumulative * selectedLayer1MuonsPionVetoIndividual
                                          *selectedLayer1MuonsTrkCumulative * selectedLayer1MuonsTrkIndividual
                                          *selectedLayer1MuonsTrkIPcumulative * selectedLayer1MuonsTrkIPindividual )
+
+# define additional collections of muon candidates
+# with loose track and ECAL isolation applied
+# (NOTE: to be used for the purpose of factorizing efficiencies
+#        of muon isolation from other event selection criteria,
+#        in order to avoid problems with limited Monte Carlo statistics)
+
+selectedLayer1MuonsTrkIsoCumulativeLooseMuonIsolation = copy.deepcopy(selectedLayer1MuonsTrkIsoCumulative)
+selectedLayer1MuonsTrkIsoCumulativeLooseMuonIsolation.vetos = cms.vstring("0.01")
+selectedLayer1MuonsTrkIsoCumulativeLooseMuonIsolation.numMax = cms.int32(-1)
+selectedLayer1MuonsTrkIsoCumulativeLooseMuonIsolation.sumPtMax = cms.double(8.)
+
+selectedLayer1MuonsTrkIsoIndividualLooseMuonIsolation = copy.deepcopy(selectedLayer1MuonsTrkIsoCumulativeLooseMuonIsolation)
+selectedLayer1MuonsTrkIsoIndividualLooseMuonIsolation.src = selectedLayer1MuonsGlobal.src
+
+selectedLayer1MuonsEcalIsoCumulativeLooseMuonIsolation = copy.deepcopy(selectedLayer1MuonsEcalIsoCumulative)
+selectedLayer1MuonsEcalIsoCumulativeLooseMuonIsolation.src = cms.InputTag("selectedLayer1MuonsTrkIsoCumulativeLooseMuonIsolation")
+selectedLayer1MuonsEcalIsoCumulativeLooseMuonIsolation.cut = cms.string('ecalIso < 8.')
+
+selectedLayer1MuonsEcalIsoIndividualLooseMuonIsolation = copy.deepcopy(selectedLayer1MuonsEcalIsoCumulativeLooseMuonIsolation)
+selectedLayer1MuonsEcalIsoIndividualLooseMuonIsolation.src = selectedLayer1MuonsGlobal.src
+
+selectedLayer1MuonsPionVetoCumulativeLooseMuonIsolation = copy.deepcopy(selectedLayer1MuonsPionVetoCumulative)
+selectedLayer1MuonsPionVetoCumulativeLooseMuonIsolation.src = cms.InputTag("selectedLayer1MuonsEcalIsoCumulativeLooseMuonIsolation")
+
+selectedLayer1MuonsPionVetoIndividualLooseMuonIsolation = copy.deepcopy(selectedLayer1MuonsPionVetoCumulativeLooseMuonIsolation)
+selectedLayer1MuonsPionVetoIndividualLooseMuonIsolation.src = selectedLayer1MuonsGlobal.src
+
+selectedLayer1MuonsTrkCumulativeLooseMuonIsolation = copy.deepcopy(selectedLayer1MuonsTrkCumulative)
+selectedLayer1MuonsTrkCumulativeLooseMuonIsolation.src = cms.InputTag("selectedLayer1MuonsPionVetoCumulativeLooseMuonIsolation")
+
+selectedLayer1MuonsTrkIndividualLooseMuonIsolation = copy.deepcopy(selectedLayer1MuonsTrkCumulativeLooseMuonIsolation)
+selectedLayer1MuonsTrkIndividualLooseMuonIsolation.src = selectedLayer1MuonsGlobal.src
+
+selectedLayer1MuonsTrkIPcumulativeLooseMuonIsolation = copy.deepcopy(selectedLayer1MuonsTrkIPcumulative)
+selectedLayer1MuonsTrkIPcumulativeLooseMuonIsolation.src = src = cms.InputTag("selectedLayer1MuonsTrkCumulativeLooseMuonIsolation")
+
+selectedLayer1MuonsTrkIPindividualLooseMuonIsolation = copy.deepcopy(selectedLayer1MuonsTrkIPcumulativeLooseMuonIsolation)
+selectedLayer1MuonsTrkIPindividualLooseMuonIsolation.src = selectedLayer1MuonsGlobal.src
+
+selectMuonsForTauAnalysesLooseMuonIsolation = cms.Sequence( selectedLayer1MuonsTrkIsoCumulativeLooseMuonIsolation
+                                                           *selectedLayer1MuonsTrkIsoIndividualLooseMuonIsolation
+                                                           *selectedLayer1MuonsEcalIsoCumulativeLooseMuonIsolation
+                                                           *selectedLayer1MuonsEcalIsoIndividualLooseMuonIsolation
+                                                           *selectedLayer1MuonsPionVetoCumulativeLooseMuonIsolation
+                                                           *selectedLayer1MuonsPionVetoIndividualLooseMuonIsolation
+                                                           *selectedLayer1MuonsTrkCumulativeLooseMuonIsolation
+                                                           *selectedLayer1MuonsTrkIndividualLooseMuonIsolation
+                                                           *selectedLayer1MuonsTrkIPcumulativeLooseMuonIsolation
+                                                           *selectedLayer1MuonsTrkIPindividualLooseMuonIsolation )
