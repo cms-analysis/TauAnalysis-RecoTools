@@ -33,26 +33,16 @@ selectedLayer1MuonsPt15Cumulative = cms.EDFilter("PATMuonSelector",
 selectedLayer1MuonsPt15Individual = copy.deepcopy(selectedLayer1MuonsPt15Cumulative)
 selectedLayer1MuonsPt15Individual.src = selectedLayer1MuonsGlobal.src
 
-# require muon candidate to match L1 && HLT muon trigger 
-selectedLayer1MuonsHLTmatchCumulative = cms.EDFilter("PATMuonSelector",
-     src = cms.InputTag("selectedLayer1MuonsPt15Cumulative"),
-     cut = cms.string('triggerMatches.size()'),
-     filter = cms.bool(False)
-)
-
-selectedLayer1MuonsHLTmatchIndividual = copy.deepcopy(selectedLayer1MuonsHLTmatchCumulative)
-selectedLayer1MuonsHLTmatchIndividual.src = selectedLayer1MuonsGlobal.src
-
 # require muon candidate to be isolated
-# with respect to tracks (of Pt > 1. GeV)
+# with respect to tracks (of Pt >~ 0.3 GeV)
 #selectedLayer1MuonsTrkIsoCumulative = cms.EDFilter("PATMuonSelector",
-#     src = cms.InputTag("selectedLayer1MuonsHLTmatchCumulative"),
-#     cut = cms.string('trackIso = 0.'),
+#     src = cms.InputTag("selectedLayer1MuonsPt15Cumulative"),
+#     cut = cms.string('trackIso < 1.'),
 #     filter = cms.bool(False)
 #)
 
 selectedLayer1MuonsTrkIsoCumulative = cms.EDFilter("PATMuonIsoDepositSelector",
-     src = cms.InputTag("selectedLayer1MuonsHLTmatchCumulative"),
+     src = cms.InputTag("selectedLayer1MuonsPt15Cumulative"),
      type = cms.string('tracker'),
      vetos = cms.vstring("0.01", "Threshold(0.9)"),
      #vetos = cms.vstring("0.01"),                          
@@ -117,7 +107,6 @@ selectedLayer1MuonsTrkIPindividual.src = selectedLayer1MuonsGlobal.src
 selectMuonsForTauAnalyses = cms.Sequence( selectedLayer1MuonsGlobal
                                          *selectedLayer1MuonsEta21Cumulative * selectedLayer1MuonsEta21Individual
                                          *selectedLayer1MuonsPt15Cumulative * selectedLayer1MuonsPt15Individual 
-                                         *selectedLayer1MuonsHLTmatchCumulative * selectedLayer1MuonsHLTmatchIndividual
                                          *selectedLayer1MuonsTrkIsoCumulative * selectedLayer1MuonsTrkIsoIndividual
                                          *selectedLayer1MuonsEcalIsoCumulative * selectedLayer1MuonsEcalIsoIndividual
                                          *selectedLayer1MuonsPionVetoCumulative * selectedLayer1MuonsPionVetoIndividual

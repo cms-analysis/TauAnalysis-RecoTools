@@ -43,26 +43,16 @@ selectedLayer1ElectronsPt15Cumulative = cms.EDFilter("PATElectronSelector",
 selectedLayer1ElectronsPt15Individual = copy.deepcopy(selectedLayer1ElectronsPt15Cumulative)
 selectedLayer1ElectronsPt15Individual.src = selectedLayer1ElectronsTightId.src
 
-# require electron candidate to match L1 && HLT electron trigger 
-selectedLayer1ElectronsHLTmatchCumulative = cms.EDFilter("PATElectronSelector",
-     src = cms.InputTag("selectedLayer1ElectronsPt15Cumulative"),
-     cut = cms.string('triggerMatches.size()'),
-     filter = cms.bool(False)
-)
-
-selectedLayer1ElectronsHLTmatchIndividual = copy.deepcopy(selectedLayer1ElectronsHLTmatchCumulative)
-selectedLayer1ElectronsHLTmatchIndividual.src = selectedLayer1ElectronsTightId.src
-
 # require electron candidate to be isolated
 # with respect to tracks (of Pt >~ 0.3 GeV)
 #selectedLayer1ElectronsTrkIsoCumulative = cms.EDFilter("PATElectronSelector",
-#     src = cms.InputTag("selectedLayer1ElectronsHLTmatchCumulative"),
-#     cut = cms.string('trackIso < 0.9'),
+#     src = cms.InputTag("selectedLayer1ElectronsPt15Cumulative"),
+#     cut = cms.string('trackIso < 1.'),
 #     filter = cms.bool(False)
 #)
 
 selectedLayer1ElectronsTrkIsoCumulative = cms.EDFilter("PATElectronIsoDepositSelector",
-     src = cms.InputTag("selectedLayer1ElectronsHLTmatchCumulative"),
+     src = cms.InputTag("selectedLayer1ElectronsPt15Cumulative"),
      type = cms.string('tracker'),
      #vetos = cms.vstring("0.015", "Threshold(0.9)"),
      vetos = cms.vstring("0.015"),                       
@@ -113,7 +103,6 @@ selectElectronsForTauAnalyses = cms.Sequence( selectedLayer1ElectronsTightId
                                              *selectedLayer1ElectronsAntiCrackCutCumulative * selectedLayer1ElectronsAntiCrackCutIndividual
                                              *selectedLayer1ElectronsEta21Cumulative * selectedLayer1ElectronsEta21Individual
                                              *selectedLayer1ElectronsPt15Cumulative * selectedLayer1ElectronsPt15Individual
-                                             *selectedLayer1ElectronsHLTmatchCumulative * selectedLayer1ElectronsHLTmatchIndividual
                                              *selectedLayer1ElectronsTrkIsoCumulative * selectedLayer1ElectronsTrkIsoIndividual
                                              *selectedLayer1ElectronsEcalIsoCumulative * selectedLayer1ElectronsEcalIsoIndividual
                                              *selectedLayer1ElectronsTrkCumulative * selectedLayer1ElectronsTrkIndividual

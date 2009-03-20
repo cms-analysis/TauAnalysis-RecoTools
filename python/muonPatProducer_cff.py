@@ -32,9 +32,6 @@ allLayer1MuonsSelForTauAnalyses = cms.EDProducer("PATMuonSelProducer",
     tauAnalysisSelMuonPt15 = cms.PSet(
       src = cms.InputTag('selectedLayer1MuonsPt15Individual')
     ),
-    tauAnalysisSelMuonHLTmatch = cms.PSet(
-      src = cms.InputTag('selectedLayer1MuonsHLTmatchIndividual')
-    ),
     tauAnalysisSelMuonTrkIso = cms.PSet(
       src = cms.InputTag('selectedLayer1MuonsTrkIsoIndividual')
     ),

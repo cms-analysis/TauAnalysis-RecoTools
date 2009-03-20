@@ -9,8 +9,8 @@ import FWCore.ParameterSet.Config as cms
 # of electronPatSelector_cfi.py
 
 selectedLayer1ElectronsTrkAntiIso = cms.EDFilter("PATElectronSelector",
-     src = cms.InputTag("selectedLayer1ElectronsHLTmatchCumulative"),
-     cut = cms.string('trackIso > 0.'),
+     src = cms.InputTag("selectedLayer1ElectronsPt15Cumulative"),
+     cut = cms.string('trackIso > 1.'),
      filter = cms.bool(False)
 )
 

@@ -45,9 +45,6 @@ allLayer1ElectronsSelForTauAnalyses = cms.EDProducer("PATElectronSelProducer",
     tauAnalysisSelElectronPt15 = cms.PSet(
       src = cms.InputTag('selectedLayer1ElectronsPt15Individual')
     ),
-    tauAnalysisSelElectronHLTmatch = cms.PSet(
-      src = cms.InputTag('selectedLayer1ElectronsHLTmatchIndividual')
-    ),
     tauAnalysisSelElectronTrkIso = cms.PSet(
       src = cms.InputTag('selectedLayer1ElectronsTrkIsoIndividual')
     ),
