@@ -1,11 +1,10 @@
 import FWCore.ParameterSet.Config as cms
 import copy
 
-from TauAnalysis.RecoTools.pftauPatSelector_cfi import *
+from TauAnalysis.RecoTools.patPFTauSelection_cfi import *
 
 # require tau candidate to be within geometric acceptance of Pixel + SiTracker detectors
 selectedLayer1TausForDiTauEta21Cumulative = copy.deepcopy(selectedLayer1TausEta21Individual)
-selectedLayer1TausForDiTauEta21Cumulative.src = cms.InputTag("allLayer1PFTausForTauAnalyses")
 
 # require tau candidate to have transverse energy above threshold
 selectedLayer1TausForDiTauPt20Cumulative = copy.deepcopy(selectedLayer1TausPt20Individual)
@@ -34,10 +33,10 @@ selectedLayer1TausForDiTauEcalIsoCumulative.src = cms.InputTag("selectedLayer1Ta
 selectedLayer1TausForDiTauProngCumulative = copy.deepcopy(selectedLayer1TausProngIndividual)
 selectedLayer1TausForDiTauProngCumulative.src = cms.InputTag("selectedLayer1TausForDiTauEcalIsoCumulative")
 
-selectPFTausForDiTau = cms.Sequence( selectedLayer1TausForDiTauEta21Cumulative
-                                    *selectedLayer1TausForDiTauPt20Cumulative
-                                    *selectedLayer1TausForDiTauLeadTrkCumulative
-                                    *selectedLayer1TausForDiTauLeadTrkPtCumulative
-                                    *selectedLayer1TausForDiTauTrkIsoCumulative
-                                    *selectedLayer1TausForDiTauEcalIsoCumulative
-                                    *selectedLayer1TausForDiTauProngCumulative )
+selectLayer1TausForDiTau = cms.Sequence( selectedLayer1TausForDiTauEta21Cumulative
+                                        *selectedLayer1TausForDiTauPt20Cumulative
+                                        *selectedLayer1TausForDiTauLeadTrkCumulative
+                                        *selectedLayer1TausForDiTauLeadTrkPtCumulative
+                                        *selectedLayer1TausForDiTauTrkIsoCumulative
+                                        *selectedLayer1TausForDiTauEcalIsoCumulative
+                                        *selectedLayer1TausForDiTauProngCumulative )

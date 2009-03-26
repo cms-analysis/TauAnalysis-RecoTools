@@ -1,13 +1,13 @@
 import FWCore.ParameterSet.Config as cms
 import copy
 
-from TauAnalysis.RecoTools.pftauPatSelector_cfi import *
+from TauAnalysis.RecoTools.patPFTauSelection_cfi import *
 
 # require tau candidate not to overlap with selected electrons
 # (in order to avoid double-counting one and the same physical particle
 #  as electron and as tau candidate)
 selectedLayer1TausForElecTauAntiOverlapWithElectronsVeto = cms.EDFilter("PATTauAntiOverlapSelector",
-     src = cms.InputTag("allLayer1PFTausForTauAnalyses"),
+     src = selectedLayer1TausEta21Individual.src,
      srcNotToBeFiltered = cms.VInputTag("selectedLayer1ElectronsTrkIPcumulative"),
      dRmin = cms.double(0.3),
      filter = cms.bool(False)                                           
@@ -48,12 +48,12 @@ selectedLayer1TausForElecTauProngCumulative.src = cms.InputTag("selectedLayer1Ta
 selectedLayer1TausForElecTauElectronVetoCumulative = copy.deepcopy(selectedLayer1TausElectronVetoIndividual)
 selectedLayer1TausForElecTauElectronVetoCumulative.src = cms.InputTag("selectedLayer1TausForElecTauProngCumulative")
 
-selectPFTausForElecTau = cms.Sequence( selectedLayer1TausForElecTauAntiOverlapWithElectronsVeto
-                                      *selectedLayer1TausForElecTauEta21Cumulative
-                                      *selectedLayer1TausForElecTauPt20Cumulative
-                                      *selectedLayer1TausForElecTauLeadTrkCumulative
-                                      *selectedLayer1TausForElecTauLeadTrkPtCumulative
-                                      *selectedLayer1TausForElecTauTrkIsoCumulative
-                                      *selectedLayer1TausForElecTauEcalIsoCumulative
-                                      *selectedLayer1TausForElecTauProngCumulative
-                                      *selectedLayer1TausForElecTauElectronVetoCumulative )
+selectLayer1TausForElecTau = cms.Sequence( selectedLayer1TausForElecTauAntiOverlapWithElectronsVeto
+                                          *selectedLayer1TausForElecTauEta21Cumulative
+                                          *selectedLayer1TausForElecTauPt20Cumulative
+                                          *selectedLayer1TausForElecTauLeadTrkCumulative
+                                          *selectedLayer1TausForElecTauLeadTrkPtCumulative
+                                          *selectedLayer1TausForElecTauTrkIsoCumulative
+                                          *selectedLayer1TausForElecTauEcalIsoCumulative
+                                          *selectedLayer1TausForElecTauProngCumulative
+                                          *selectedLayer1TausForElecTauElectronVetoCumulative )

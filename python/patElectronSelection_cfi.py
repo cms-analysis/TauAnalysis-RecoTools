@@ -1,13 +1,16 @@
 import FWCore.ParameterSet.Config as cms
 import copy
-  
-# module to select Electrons
-# See https://twiki.cern.ch/twiki/bin/view/CMS/SWGuidePhysicsCutParser
-# on how to use the cut-string
+
+#--------------------------------------------------------------------------------  
+# produce collections of pat::Electrons passing selection criteria
+#--------------------------------------------------------------------------------
+
+# see https://twiki.cern.ch/twiki/bin/view/CMS/SWGuidePhysicsCutParser
+# on how to use the cut-string parser
 
 # require electron candidate to pass the tight electron id. criteria
 selectedLayer1ElectronsTightId = cms.EDFilter("PATElectronSelector",
-     src = cms.InputTag("allLayer1ElectronsForTauAnalyses"),
+     src = cms.InputTag("allLayer1Electrons"),
      cut = cms.string('(abs(superCluster.eta) < 1.479 & electronID("robust") > 0 & eSuperClusterOverP < 1.05 & eSuperClusterOverP > 0.95) | (abs(superCluster.eta) > 1.479 & electronID("robust") > 0 & eSuperClusterOverP < 1.12 & eSuperClusterOverP > 0.95)'),
      filter = cms.bool(False)
 )
@@ -99,11 +102,50 @@ selectedLayer1ElectronsTrkIPcumulative = cms.EDProducer("PATElectronIpSelector",
 selectedLayer1ElectronsTrkIPindividual = copy.deepcopy(selectedLayer1ElectronsTrkIPcumulative)
 selectedLayer1ElectronsTrkIPindividual.src = selectedLayer1ElectronsTightId.src
 
-selectElectronsForTauAnalyses = cms.Sequence( selectedLayer1ElectronsTightId
-                                             *selectedLayer1ElectronsAntiCrackCutCumulative * selectedLayer1ElectronsAntiCrackCutIndividual
-                                             *selectedLayer1ElectronsEta21Cumulative * selectedLayer1ElectronsEta21Individual
-                                             *selectedLayer1ElectronsPt15Cumulative * selectedLayer1ElectronsPt15Individual
-                                             *selectedLayer1ElectronsTrkIsoCumulative * selectedLayer1ElectronsTrkIsoIndividual
-                                             *selectedLayer1ElectronsEcalIsoCumulative * selectedLayer1ElectronsEcalIsoIndividual
-                                             *selectedLayer1ElectronsTrkCumulative * selectedLayer1ElectronsTrkIndividual
-                                             *selectedLayer1ElectronsTrkIPcumulative * selectedLayer1ElectronsTrkIPindividual )
+selectLayer1Electrons = cms.Sequence( selectedLayer1ElectronsTightId
+                                     *selectedLayer1ElectronsAntiCrackCutCumulative * selectedLayer1ElectronsAntiCrackCutIndividual
+                                     *selectedLayer1ElectronsEta21Cumulative * selectedLayer1ElectronsEta21Individual
+                                     *selectedLayer1ElectronsPt15Cumulative * selectedLayer1ElectronsPt15Individual
+                                     *selectedLayer1ElectronsTrkIsoCumulative * selectedLayer1ElectronsTrkIsoIndividual
+                                     *selectedLayer1ElectronsEcalIsoCumulative * selectedLayer1ElectronsEcalIsoIndividual
+                                     *selectedLayer1ElectronsTrkCumulative * selectedLayer1ElectronsTrkIndividual
+                                     *selectedLayer1ElectronsTrkIPcumulative * selectedLayer1ElectronsTrkIPindividual )
+
+#--------------------------------------------------------------------------------
+# produce "summary" collection of pat::Electrons with flags added,
+# indicating whether or not electrons passed individual selection criteria
+#--------------------------------------------------------------------------------
+
+allLayer1ElectronsSel = cms.EDProducer("PATElectronSelProducer",
+
+  leptonSource = cms.InputTag("allLayer1Electrons"),
+
+  selFlags = cms.PSet(
+    tauAnalysisSelElectronTightIdGlobal = cms.PSet(
+      src = cms.InputTag('selectedLayer1ElectronsTightId')
+    ),
+    tauAnalysisSelElectronAntiCrackCut = cms.PSet(
+      src = cms.InputTag('selectedLayer1ElectronsAntiCrackCutIndividual')
+    ),
+    tauAnalysisSelElectronEta21 = cms.PSet(
+      src = cms.InputTag('selectedLayer1ElectronsEta21Individual')
+    ),
+    tauAnalysisSelElectronPt15 = cms.PSet(
+      src = cms.InputTag('selectedLayer1ElectronsPt15Individual')
+    ),
+    tauAnalysisSelElectronTrkIso = cms.PSet(
+      src = cms.InputTag('selectedLayer1ElectronsTrkIsoIndividual')
+    ),
+    tauAnalysisSelElectronEcalIso = cms.PSet(
+      src = cms.InputTag('selectedLayer1ElectronsEcalIsoIndividual')
+    ),
+    tauAnalysisSelElectronTrk = cms.PSet(
+      src = cms.InputTag('selectedLayer1ElectronsTrkIndividual')
+    ),
+    tauAnalysisSelElectronTrkIP = cms.PSet(
+      src = cms.InputTag('selectedLayer1ElectronsTrkIPindividual')
+    )
+  )
+)
+
+produceLayer1SelElectrons = cms.Sequence( selectLayer1Electrons * allLayer1ElectronsSel )

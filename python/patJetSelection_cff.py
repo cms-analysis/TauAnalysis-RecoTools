@@ -1,9 +1,12 @@
 import FWCore.ParameterSet.Config as cms
 import copy
-  
-# module to select Jets
-# See https://twiki.cern.ch/twiki/bin/view/CMS/SWGuidePhysicsCutParser
-# on how to use the cut-string
+
+#--------------------------------------------------------------------------------  
+# produce collections of pat::Jets passing selection criteria
+#--------------------------------------------------------------------------------
+
+# see https://twiki.cern.ch/twiki/bin/view/CMS/SWGuidePhysicsCutParser
+# on how to use the cut-string parser
 
 # select jets not identified as electron, muon or tau-jets
 selectedLayer1JetsAntiOverlapWithLeptonsVeto = cms.EDFilter("PATJetAntiOverlapSelector",
@@ -29,6 +32,6 @@ selectedLayer1JetsEt20 = cms.EDFilter("PATJetSelector",
      filter = cms.bool(False)
 )
 
-selectJetsForTauAnalyses = cms.Sequence( selectedLayer1JetsAntiOverlapWithLeptonsVeto
-                                        *selectedLayer1JetsEta21
-                                        *selectedLayer1JetsEt20 )
+selectLayer1Jets = cms.Sequence( selectedLayer1JetsAntiOverlapWithLeptonsVeto
+                                *selectedLayer1JetsEta21
+                                *selectedLayer1JetsEt20 )

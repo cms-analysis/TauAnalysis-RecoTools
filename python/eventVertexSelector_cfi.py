@@ -27,6 +27,6 @@ selectedPrimaryVertexPosition = cms.EDFilter("VertexSelector",
     filter = cms.bool(False)                                           
 )
 
-selectPrimaryVertexForTauAnalyses = cms.Sequence( selectedPrimaryVertexHighestPtTrackSum
-                                                 *selectedPrimaryVertexQuality
-                                                 *selectedPrimaryVertexPosition )
+selectPrimaryVertex = cms.Sequence( selectedPrimaryVertexHighestPtTrackSum
+                                   *selectedPrimaryVertexQuality
+                                   *selectedPrimaryVertexPosition )
