@@ -1,11 +1,21 @@
 import FWCore.ParameterSet.Config as cms
 import sys
 
+#--------------------------------------------------------------------------------
+# utility function for generation of sequences
+# producing collections of selected pat::Electrons,
+# pat::Muons, pat::Taus (and other objects)
+#
+# Author: Christian Veelken, UC Davis
+#
+#--------------------------------------------------------------------------------
+
 class objSelConfigurator(cms._ParameterTypeBase):
 
-    def __init__(self, objSelList, src = None, pyModuleName = None, doSelCumulative = True, doSelIndividual = False):
+    def __init__(self, objSelList, src = None, srcAttr = "src", pyModuleName = None, doSelCumulative = True, doSelIndividual = False):
         self.objSelList = objSelList
         self.src = src
+        self.srcAttr = srcAttr
         self.pyModuleName = pyModuleName,
         self.doSelCumulative = doSelCumulative
         self.doSelIndividual = doSelIndividual
@@ -15,11 +25,17 @@ class objSelConfigurator(cms._ParameterTypeBase):
         # auxiliary function for concatenating two strings;
         # if the last character of part_1 is lower-case (upper-case),
         # capitalize (lowercase) the first character of part_2
-        if part_1[-1].islower():
+        if part_1[-1].islower() or part_1[-1].isdigit():
             return part_1 + part_2.capitalize()
         else:
             return part_1 + part_2[0].lower() + part_2[1:]
 
+    #@staticmethod    
+    #def _getInstanceName(obj):
+    #    for module in sys.modules.values():
+    #        for name, ref in module.__dict__.items():
+    #            if ref is obj : return name
+                
     class _getterCumulative:
         # auxiliary class for composing name of module selecting "cumulative" collection
         @staticmethod
@@ -43,19 +59,26 @@ class objSelConfigurator(cms._ParameterTypeBase):
 
     def _addModule(self, objSelItem, getter):
         # create module
-        moduleType = objSelItem.type.value()
+        moduleType = objSelItem.pluginType.value()
         module = cms.EDFilter(moduleType)
 
         # set module attributes
         for objSelAttrName in dir(objSelItem):
             objSelAttr = getattr(objSelItem, objSelAttrName)
-            if isinstance(objSelAttr, cms._ParameterTypeBase) and not objSelAttrName in ["name", "type"]:
+            if isinstance(objSelAttr, cms._ParameterTypeBase) and not objSelAttrName in ["pluginName", "pluginType"]:
                 setattr(module, objSelAttrName, objSelAttr)
         src = getter.get_src(self.src, self.lastModuleName)
-        setattr(module, "src", cms.InputTag(src))
+        setattr(module, self.srcAttr, cms.InputTag(src))
 
-        moduleName = getter.get_moduleName(objSelItem.name.value())
+        moduleName = getter.get_moduleName(objSelItem.pluginName.value())
+        module.setLabel(moduleName)
         
+        #print("moduleName = " + moduleName)
+        #module._Labelable__label = moduleName
+
+	#print("objSelItem.pluginName.value = " + objSelItem.pluginName.value())
+        #print("_getInstanceName(objSelItem) = " + self._getInstanceName(objSelItem))
+               
         # register module in global python name-space
         pyModule = sys.modules[self.pyModuleName[0]]
         if pyModule is None:
