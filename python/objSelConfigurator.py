@@ -30,12 +30,17 @@ class objSelConfigurator(cms._ParameterTypeBase):
         else:
             return part_1 + part_2[0].lower() + part_2[1:]
 
-    #@staticmethod    
-    #def _getInstanceName(obj):
-    #    for module in sys.modules.values():
-    #        for name, ref in module.__dict__.items():
-    #            if ref is obj : return name
-                
+    @staticmethod    
+    def _getInstanceName(obj, namespace):
+        if namespace is not None:
+            for name, ref in namespace.items():
+                if ref is obj : return name
+        else:
+            for pyModule in sys.modules.values():
+                for name, ref in pyModule.__dict__.items():
+                    if ref is obj : return name
+        return None            
+
     class _getterCumulative:
         # auxiliary class for composing name of module selecting "cumulative" collection
         @staticmethod
@@ -57,9 +62,9 @@ class objSelConfigurator(cms._ParameterTypeBase):
         def get_moduleName(name):
             return objSelConfigurator._composeModuleName(name, "Individual")
 
-    def _addModule(self, objSelItem, getter):
+    def _addModule(self, objSelItem, namespace, getter):
         # create module
-        moduleType = objSelItem.pluginType.value()
+        moduleType = objSelItem.type_()
         module = cms.EDFilter(moduleType)
 
         # set module attributes
@@ -69,20 +74,14 @@ class objSelConfigurator(cms._ParameterTypeBase):
                 setattr(module, objSelAttrName, objSelAttr)
         src = getter.get_src(self.src, self.lastModuleName)
         setattr(module, self.srcAttr, cms.InputTag(src))
-
-        moduleName = getter.get_moduleName(objSelItem.pluginName.value())
-        module.setLabel(moduleName)
         
-        #print("moduleName = " + moduleName)
-        #module._Labelable__label = moduleName
-
-	#print("objSelItem.pluginName.value = " + objSelItem.pluginName.value())
-        #print("_getInstanceName(objSelItem) = " + self._getInstanceName(objSelItem))
+        moduleName = getter.get_moduleName(self._getInstanceName(objSelItem, namespace))
+        module.setLabel(moduleName)
                
         # register module in global python name-space
         pyModule = sys.modules[self.pyModuleName[0]]
         if pyModule is None:
-            raise ValueError("pyModuleName Parameter invalid !!")
+            raise ValueError("'pyModuleName' Parameter invalid !!")
         setattr(pyModule, moduleName, module)
         
         self.lastModuleName = moduleName
@@ -93,12 +92,12 @@ class objSelConfigurator(cms._ParameterTypeBase):
         else:
             self.sequence *= module
 
-    def configure(self):
+    def configure(self, namespace = None):
         # configure modules for "cumulative" and "individual" collections
         # of objects passing selection
 
         if self.src is None:
-            raise ValueError("src Parameter must not be empty !!")
+            raise ValueError("'src' Parameter must not be empty !!")
 
         self.sequence = None
         self.lastModuleName = None
@@ -106,11 +105,11 @@ class objSelConfigurator(cms._ParameterTypeBase):
         if self.doSelCumulative:
             getter = objSelConfigurator._getterCumulative()
             for objSelItem in self.objSelList:
-                self._addModule(objSelItem, getter)
+                self._addModule(objSelItem, namespace, getter)
 
         if self.doSelIndividual:
             getter = objSelConfigurator._getterIndividual()
             for objSelItem in self.objSelList:
-                self._addModule(objSelItem, getter)
+                self._addModule(objSelItem, namespace, getter)
 
         return cms.Sequence(self.sequence)
