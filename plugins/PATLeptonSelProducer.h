@@ -1,5 +1,5 @@
 //
-// $Id: PATLeptonSelProducer.h,v 1.1 2009/01/23 14:58:11 veelken Exp $
+// $Id: PATLeptonSelProducer.h,v 1.2 2009/02/10 10:23:31 veelken Exp $
 //
 
 #ifndef TauAnalysis_RecoTools_PATLeptonSelProducer_h
@@ -13,17 +13,13 @@
    into pat::Electron/pat::Muon/pat::Tau objects
 
   \author   Christian Veelken
-  \version  $Id: PATLeptonSelProducer.h,v 1.1 2009/01/23 14:58:11 veelken Exp $
+  \version  $Id: PATLeptonSelProducer.h,v 1.2 2009/02/10 10:23:31 veelken Exp $
 */
 
 #include "FWCore/Framework/interface/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ParameterSet/interface/InputTag.h"
-
-#include "DataFormats/PatCandidates/interface/Electron.h"
-#include "DataFormats/PatCandidates/interface/Muon.h"
-#include "DataFormats/PatCandidates/interface/Tau.h"
 
 #include <vector>
 #include <string>

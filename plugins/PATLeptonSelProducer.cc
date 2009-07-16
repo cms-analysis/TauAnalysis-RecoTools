@@ -1,5 +1,5 @@
 //
-// $Id: PATLeptonSelProducer.cc,v 1.1 2009/01/23 14:58:11 veelken Exp $
+// $Id: PATLeptonSelProducer.cc,v 1.2 2009/02/10 10:23:31 veelken Exp $
 //
 
 #include "TauAnalysis/RecoTools/plugins/PATLeptonSelProducer.h"
@@ -89,6 +89,10 @@ void PATLeptonSelProducer<T>::produce(edm::Event & iEvent, const edm::EventSetup
   std::auto_ptr<patLeptonCollection> ptr(patLeptonOutputCollection);
   iEvent.put(ptr);
 }
+
+#include "DataFormats/PatCandidates/interface/Electron.h"
+#include "DataFormats/PatCandidates/interface/Muon.h"
+#include "DataFormats/PatCandidates/interface/Tau.h"
 
 typedef PATLeptonSelProducer<pat::Electron> PATElectronSelProducer;
 typedef PATLeptonSelProducer<pat::Muon> PATMuonSelProducer;
