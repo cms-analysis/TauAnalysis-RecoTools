@@ -5,6 +5,7 @@
 <use name=DataFormats/PatCandidates>
 <use name=DataFormats/Provenance>
 <use name=PhysicsTools/JetMCUtils>
+<use name=SimGeneral/HepPDTRecord>
 <use name=DQMServices/Core>
 <use name=TauAnalysis/DQMTools>
 <use name=TauAnalysis/GenSimTools>
@@ -19,6 +20,7 @@
   <use name=DataFormats/PatCandidates>
   <use name=DataFormats/Provenance>
   <use name=PhysicsTools/JetMCUtils>
+  <use name=SimGeneral/HepPDTRecord>
   <use name=DQMServices/Core>
   <use name=TauAnalysis/DQMTools>
   <use name=TauAnalysis/GenSimTools>
