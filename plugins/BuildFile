@@ -13,5 +13,6 @@
   <use name=PhysicsTools/PatUtils>
   <use name=PhysicsTools/UtilAlgos>
   <use name=PhysicsTools/Utilities>
+  <use name=TauAnalysis/RecoTools>
   <use name=root>
 </library>
