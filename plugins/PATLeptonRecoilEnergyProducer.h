@@ -9,7 +9,7 @@
  *
  * \version $Revision: 1.1 $
  *
- * $Id: PATLeptonRecoilEnergyProducer.h,v 1.1 2009/07/17 14:20:28 veelken Exp $
+ * $Id: PATLeptonRecoilEnergyProducer.h,v 1.1 2009/07/29 13:03:38 veelken Exp $
  *
  */
 
