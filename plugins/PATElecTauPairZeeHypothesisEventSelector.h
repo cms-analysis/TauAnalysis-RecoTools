@@ -1,5 +1,5 @@
 //
-// $Id: PATElecTauPairZeeHypothesisEventSelector.h,v 1.1 2009/02/11 17:10:16 veelken Exp $
+// $Id: PATElecTauPairZeeHypothesisEventSelector.h,v 1.1 2009/07/29 13:03:38 veelken Exp $
 //
 
 #ifndef TauAnalysis_RecoTools_PATElecTauPairZeeHypothesisEventSelector_h
@@ -8,7 +8,7 @@
 #include "PhysicsTools/UtilAlgos/interface/AnySelector.h"
 #include "PhysicsTools/UtilAlgos/interface/ObjectCountEventSelector.h"
 #include "PhysicsTools/UtilAlgos/interface/MinNumberSelector.h"
-#include "PhysicsTools/PatUtils/interface/MaxNumberSelector.h"
+#include "PhysicsTools/UtilAlgos/interface/MaxNumberSelector.h"
 
 #include "AnalysisDataFormats/TauAnalysis/interface/PATElecTauPairZeeHypothesis.h"
 

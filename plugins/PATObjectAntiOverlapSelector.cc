@@ -3,7 +3,7 @@
 #include "DataFormats/Candidate/interface/CandidateFwd.h" 
 #include "DataFormats/Candidate/interface/Candidate.h" 
 
-#include "PhysicsTools/Utilities/interface/deltaR.h"
+#include "DataFormats/Math/interface/deltaR.h"
 
 template <class T>
 PATObjectAntiOverlapSelector<T>::PATObjectAntiOverlapSelector(const edm::ParameterSet& cfg)

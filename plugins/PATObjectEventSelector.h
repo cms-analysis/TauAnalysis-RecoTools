@@ -1,5 +1,5 @@
 //
-// $Id: PATObjectEventSelector.h,v 1.2 2009/03/20 16:50:24 veelken Exp $
+// $Id: PATObjectEventSelector.h,v 1.3 2009/06/09 12:37:54 veelken Exp $
 //
 
 #ifndef TauAnalysis_RecoTools_PATObjectEventSelector_h
@@ -8,7 +8,7 @@
 #include "PhysicsTools/UtilAlgos/interface/AnySelector.h"
 #include "PhysicsTools/UtilAlgos/interface/ObjectCountEventSelector.h"
 #include "PhysicsTools/UtilAlgos/interface/MinNumberSelector.h"
-#include "PhysicsTools/PatUtils/interface/MaxNumberSelector.h"
+#include "PhysicsTools/UtilAlgos/interface/MaxNumberSelector.h"
 #include "PhysicsTools/UtilAlgos/interface/AndSelector.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/Common/interface/View.h"

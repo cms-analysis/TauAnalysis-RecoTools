@@ -1,5 +1,5 @@
 //
-// $Id: PATLeptonRecoilEnergyEventSelector.h,v 1.1 2009/07/29 13:03:38 veelken Exp $
+// $Id: PATLeptonRecoilEnergyEventSelector.h,v 1.1 2009/07/30 11:55:01 veelken Exp $
 //
 
 #ifndef TauAnalysis_RecoTools_PATLeptonRecoilEnergyEventSelector_h
@@ -8,7 +8,7 @@
 #include "PhysicsTools/UtilAlgos/interface/AnySelector.h"
 #include "PhysicsTools/UtilAlgos/interface/ObjectCountEventSelector.h"
 #include "PhysicsTools/UtilAlgos/interface/MinNumberSelector.h"
-#include "PhysicsTools/PatUtils/interface/MaxNumberSelector.h"
+#include "PhysicsTools/UtilAlgos/interface/MaxNumberSelector.h"
 
 #include "AnalysisDataFormats/TauAnalysis/interface/PATLeptonRecoilEnergy.h"
 
