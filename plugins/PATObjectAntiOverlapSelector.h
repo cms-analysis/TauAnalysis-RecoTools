@@ -10,9 +10,9 @@
  *  modified by Konstantinos A. Petridis,
  *              Christian Veelken
  *
- * \version $Revision: 1.2 $
+ * \version $Revision: 1.3 $
  *
- * $Id: PATObjectAntiOverlapSelector.h,v 1.2 2009/02/16 16:00:31 veelken Exp $
+ * $Id: PATObjectAntiOverlapSelector.h,v 1.3 2009/06/12 14:43:51 veelken Exp $
  *
  */
 
@@ -43,6 +43,9 @@ class PATObjectAntiOverlapSelector
 
   typedef std::vector<edm::InputTag> vInputTag;
   vInputTag srcNotToBeFiltered_;
+
+  //when invert is TRUE the selector looks for overlapping objects
+  bool invert_;
 
   double dRmin_;
 };

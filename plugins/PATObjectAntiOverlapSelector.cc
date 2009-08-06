@@ -10,6 +10,7 @@ PATObjectAntiOverlapSelector<T>::PATObjectAntiOverlapSelector(const edm::Paramet
 {
   srcNotToBeFiltered_ = cfg.getParameter<vInputTag>("srcNotToBeFiltered");
   dRmin_ = cfg.getParameter<double>("dRmin");
+  invert_ = cfg.getUntrackedParameter<bool>("invert",false);
 }
 
 template <class T>
@@ -44,7 +45,13 @@ void PATObjectAntiOverlapSelector<T>::select(const edm::Handle<collection>& part
   for ( typename collection::const_iterator particleToBeFiltered = particlesToBeFiltered->begin();
 	particleToBeFiltered != particlesToBeFiltered->end(); ++particleToBeFiltered, ++particleToBeFilteredIndex ) {
 
-    if ( !isOverlap[particleToBeFilteredIndex] ) selected_.push_back(&(*particleToBeFiltered)); 
+    if(!invert_){
+      if ( !isOverlap[particleToBeFilteredIndex] ) selected_.push_back(&(*particleToBeFiltered)); 
+    }
+    else {
+      if ( isOverlap[particleToBeFilteredIndex] ) selected_.push_back(&(*particleToBeFiltered)); 
+    }
+
   }
 }
 
