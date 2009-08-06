@@ -3,8 +3,8 @@ import FWCore.ParameterSet.Config as cms
 from TauAnalysis.CandidateTools.diCandidatePairProducer_cfi import diTauProducer
 recoDiTau = diTauProducer.clone()
 #Be careful in standard PAT_v2 'selectedLayer1' collections are not cleaned
-recoDiTau.srcLeg1 = 'cleanLayer1Muons'
-recoDiTau.srcLeg2 = 'cleanLayer1Taus'
+recoDiTau.srcLeg1 = 'selectedLayer1Muons'
+recoDiTau.srcLeg2 = 'selectedLayer1Taus'
 #Be careful in standard PAT_v2 MET collection is called 'layer1METs'
 recoDiTau.srcMET = 'layer1METs'
 
