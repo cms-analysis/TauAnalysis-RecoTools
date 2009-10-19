@@ -14,5 +14,6 @@
   <use name=PhysicsTools/UtilAlgos>
   <use name=PhysicsTools/Utilities>
   <use name=SimGeneral/HepPDTRecord>
+  <use name=AnalysisDataFormats/TauAnalysis>
   <use name=root>
 </library>
