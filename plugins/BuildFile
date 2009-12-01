@@ -15,5 +15,6 @@
   <use name=PhysicsTools/Utilities>
   <use name=SimGeneral/HepPDTRecord>
   <use name=AnalysisDataFormats/TauAnalysis>
+  <use name=TauAnalysis/CandidateTools>
   <use name=root>
 </library>
