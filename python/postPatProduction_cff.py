@@ -27,10 +27,16 @@ from TauAnalysis.RecoTools.eventVertexSelector_cfi import *
 # with respect to direction of missing Et vector
 from TauAnalysis.CandidateTools.metTopology_cfi import *
 
-produceGenObjects = cms.Sequence( produceGenDecayProductsFromZs
-                                 +produceGenPhaseSpaceEventInfo
-                                 +produceTauGenJets
-                                 +produceGenMETwithMu )
-produceRecObjects = cms.Sequence( selectPrimaryVertex
-                                 +produceMEtTopology )
+produceGenObjects = cms.Sequence(
+    produceGenDecayProductsFromZs
+   + produceGenPhaseSpaceEventInfo
+   + produceTauGenJets
+   + produceGenMETwithMu
+)
+
+produceRecObjects = cms.Sequence(
+    selectPrimaryVertex
+   + produceMEtTopology
+)
+
 producePostPat = cms.Sequence( produceGenObjects + produceRecObjects )
