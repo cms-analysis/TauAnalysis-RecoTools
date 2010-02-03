@@ -81,9 +81,12 @@ class SmearedParticleProducer : public edm::EDProducer {
     etaHisto_(iConfig.getParameter<std::string>("etaHistogram")),			  
     energyScale_(iConfig.getParameter<double>("energyScale")),
     deltaEta_(iConfig.getParameter<double>("deltaEta")),
+    deltaPhi_(iConfig.getParameter<double>("deltaPhi")),
     deltaPt_(iConfig.getParameter<double>("deltaPt")),
     gSigmaPt_(iConfig.getParameter<double>("gaussianSmearingSigmaPt")),
-    gSigmaEta_(iConfig.getParameter<double>("gaussianSmearingSigmaEta")) 
+    gSigmaEta_(iConfig.getParameter<double>("gaussianSmearingSigmaEta")), 
+    gSigmaPhi_(iConfig.getParameter<double>("gaussianSmearingSigmaPhi")) ,
+    gSigmaEScale_(iConfig.getParameter<double>("gaussianSmearingSigmaEScale")) 
     {
       //Check if the file with the histograms is there
       if(smearFromPtHistogram_||smearFromEtaHistogram_) {
@@ -116,6 +119,8 @@ class SmearedParticleProducer : public edm::EDProducer {
       flatDistribution = new CLHEP::RandFlat(randomEngine, 0., 1.);
       gaussPt = new CLHEP::RandGauss(randomEngine, 0.,gSigmaPt_ );
       gaussEta = new CLHEP::RandGauss(randomEngine, 0.,gSigmaEta_ );
+      gaussPhi = new CLHEP::RandGauss(randomEngine, 0.,gSigmaPhi_ );
+      gaussEScale = new CLHEP::RandGauss(randomEngine, 1.,gSigmaEScale_ );
 
       produces<std::vector<T> >();
     }
@@ -132,6 +137,12 @@ class SmearedParticleProducer : public edm::EDProducer {
       delete flatDistribution;
     if(gaussPt !=0)
       delete gaussPt;
+    if(gaussEta !=0)
+      delete gaussEta;
+    if(gaussPhi !=0)
+      delete gaussPhi;
+    if(gaussEScale !=0)
+      delete gaussEScale;
     if(etaHisto !=0)
       delete gaussEta;
   }
@@ -158,17 +169,20 @@ class SmearedParticleProducer : public edm::EDProducer {
 	 math::XYZTLorentzVector cartVecES = energyScale_*vToSmear;
 	 object.setP4(cartVecES);
 	 
-	 //apply pt and eta DISPLACEMENTS
-	 math::PtEtaPhiMLorentzVector vec(object.pt()+deltaPt_,object.eta()+deltaEta_,object.phi(),object.mass());
+	 //apply pt and eta and phi DISPLACEMENTS
+	 math::PtEtaPhiMLorentzVector vec(object.pt()+deltaPt_,object.eta()+deltaEta_,object.phi()+deltaPhi_,object.mass());
 	 math::XYZTLorentzVector cartVec(vec.px(),vec.py(),vec.pz(),vec.energy());
 	 object.setP4(cartVec);
 	 
 	 //Apply gaussian smearing
 	 double deltaPt = gaussPt->fire();
 	 double deltaEta = gaussEta->fire();
-	 math::PtEtaPhiMLorentzVector vecGauss(object.pt()+deltaPt,object.eta()+deltaEta,object.phi(),object.mass());
+	 double deltaPhi = gaussPhi->fire();
+	 double deltaEScale = gaussEScale->fire();
+
+	 math::PtEtaPhiMLorentzVector vecGauss(object.pt()+deltaPt,object.eta()+deltaEta,object.phi()+deltaPhi,object.mass());
 	 math::XYZTLorentzVector cartVecGauss(vecGauss.px(),vecGauss.py(),vecGauss.pz(),vecGauss.energy());
-	 object.setP4(cartVecGauss);
+	 object.setP4(deltaEScale*cartVecGauss);
 	
 	 //OK Now histogram Smearing
 	 double hDeltaPt = 0.0;
@@ -258,20 +272,27 @@ class SmearedParticleProducer : public edm::EDProducer {
       bool smearFromEtaHistogram_;  //Smear from an Eta resolution histogram 
       std::string ptHisto_;         //Histogram name in File
       std::string etaHisto_;        //Histogram name in File
+
       //Flat smearing
       double energyScale_;          //energy Scale 
       double deltaEta_;             //delta Eta
       double deltaPt_;              //delta Pt
+      double deltaPhi_;              //delta phi
 
       //Random number generator services
       edm::Service<edm::RandomNumberGenerator> rng;
       CLHEP::RandFlat* flatDistribution; 
       CLHEP::RandGauss* gaussPt;  
       CLHEP::RandGauss* gaussEta; 
+      CLHEP::RandGauss* gaussPhi; 
+      CLHEP::RandGauss* gaussEScale; 
 
       //Gaussian Smearing
       double gSigmaPt_;
       double gSigmaEta_;
+      double gSigmaPhi_;
+      double gSigmaEScale_;
+
 
       //Private data
       TFile *f;
