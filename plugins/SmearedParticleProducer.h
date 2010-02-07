@@ -120,7 +120,7 @@ class SmearedParticleProducer : public edm::EDProducer {
       gaussPt = new CLHEP::RandGauss(randomEngine, 0.,gSigmaPt_ );
       gaussEta = new CLHEP::RandGauss(randomEngine, 0.,gSigmaEta_ );
       gaussPhi = new CLHEP::RandGauss(randomEngine, 0.,gSigmaPhi_ );
-      gaussEScale = new CLHEP::RandGauss(randomEngine, 1.,gSigmaEScale_ );
+      gaussEScale = new CLHEP::RandGauss(randomEngine, 1.0,gSigmaEScale_ );
 
       produces<std::vector<T> >();
     }
