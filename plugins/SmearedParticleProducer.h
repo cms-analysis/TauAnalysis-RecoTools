@@ -129,22 +129,21 @@ class SmearedParticleProducer : public edm::EDProducer {
     if(smearFromPtHistogram_||smearFromEtaHistogram_) 
 	f->Close();
 
-    if(ptHisto !=0) 
-      delete ptHisto;
-    if(etaHisto !=0) 
-      delete etaHisto;
-    if(flatDistribution !=0)
-      delete flatDistribution;
-    if(gaussPt !=0)
-      delete gaussPt;
-    if(gaussEta !=0)
-      delete gaussEta;
-    if(gaussPhi !=0)
-      delete gaussPhi;
-    if(gaussEScale !=0)
-      delete gaussEScale;
-    if(etaHisto !=0)
-      delete gaussEta;
+/*     if(ptHisto !=0)  */
+/*       delete ptHisto; */
+/*     if(etaHisto !=0)  */
+/*       delete etaHisto; */
+/*     if(flatDistribution !=0) */
+/*       delete flatDistribution; */
+/*     if(gaussPt !=0) */
+/*       delete gaussPt; */
+/*     if(gaussEta !=0) */
+/*       delete gaussEta; */
+/*     if(gaussPhi !=0) */
+/*       delete gaussPhi; */
+/*     if(gaussEScale !=0) */
+/*       delete gaussEScale; */
+
   }
     
    protected:
