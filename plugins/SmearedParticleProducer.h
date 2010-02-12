@@ -85,8 +85,9 @@ class SmearedParticleProducer : public edm::EDProducer {
     deltaPt_(iConfig.getParameter<double>("deltaPt")),
     gSigmaPt_(iConfig.getParameter<double>("gaussianSmearingSigmaPt")),
     gSigmaEta_(iConfig.getParameter<double>("gaussianSmearingSigmaEta")), 
-    gSigmaPhi_(iConfig.getParameter<double>("gaussianSmearingSigmaPhi")) ,
-    gSigmaEScale_(iConfig.getParameter<double>("gaussianSmearingSigmaEScale")) 
+    gSigmaPhi_(iConfig.getParameter<double>("gaussianSmearingSigmaPhi")),
+    gSigmaEScale_(iConfig.getParameter<double>("gaussianSmearingSigmaEScale")),
+    moduleLabel_(iConfig.getParameter<std::string>("@module_label"))
     {
       //Check if the file with the histograms is there
       if(smearFromPtHistogram_||smearFromEtaHistogram_) {
@@ -201,6 +202,9 @@ class SmearedParticleProducer : public edm::EDProducer {
        }
      
      virtual void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+       //std::cout << "<SmearedParticleProducer::produce>:" << std::endl;
+       //std::cout << "(label = " << moduleLabel_ << ")" << std::endl;
+
        using namespace edm;
        
        std::auto_ptr<std::vector<T> > out(new std::vector<T> );
@@ -208,8 +212,16 @@ class SmearedParticleProducer : public edm::EDProducer {
        
        if(iEvent.getByLabel(src_,srcH)) 
 	 for(unsigned int i=0;i<srcH->size();++i) {
-	   T  object = srcH->at(i);
+	   T object = srcH->at(i);
+
+	   //std::cout << " original object(" << i << "): Pt = " << object.pt() << "," 
+	   //	       << " eta = " << object.eta() << ", phi = " << object.phi() << std::endl;
+
 	   smear(object);
+
+	   //std::cout << "smeared object(" << i << "): Pt = " << object.pt() << "," 
+	   // 	       << " eta = " << object.eta() << ", phi = " << object.phi() << std::endl;
+
 	   out->push_back(object);
 	 }
        
@@ -297,6 +309,8 @@ class SmearedParticleProducer : public edm::EDProducer {
       TFile *f;
       TH1F *ptHisto;
       TH1F *etaHisto;
+
+      std::string moduleLabel_;
 };
 
 

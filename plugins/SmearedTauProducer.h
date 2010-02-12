@@ -20,6 +20,9 @@ class SmearedTauProducer : public SmearedParticleProducer<pat::Tau,GenJetRetriev
   virtual void endJob() {}
   
   virtual void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+    //std::cout << "<SmearedTauProducer::produce>:" << std::endl;
+    //std::cout << "(label = " << moduleLabel_ << ")" << std::endl;
+
     using namespace edm;
     using namespace reco;
 
@@ -27,7 +30,10 @@ class SmearedTauProducer : public SmearedParticleProducer<pat::Tau,GenJetRetriev
     Handle<std::vector<pat::Tau> > srcH;
     if(iEvent.getByLabel(src_,srcH) &&srcH->size()>0) 
       for(unsigned int i=0;i<srcH->size();++i) {
-	pat::Tau  object = srcH->at(i);
+	pat::Tau object = srcH->at(i);
+	//std::cout << " original object(" << i << "): Pt = " << object.pt() << "," 
+	//	    << " eta = " << object.eta() << ", phi = " << object.phi() << std::endl;
+
 	smear(object);
 
         if(smearConstituents_) {
@@ -48,6 +54,10 @@ class SmearedTauProducer : public SmearedParticleProducer<pat::Tau,GenJetRetriev
 	  gammaLV=gammaEnergyScale_*gammaLV;
  	  object.setP4(gammaLV+hadronLV);
 	}
+	
+	//std::cout << "smeared object(" << i << "): Pt = " << object.pt() << "," 
+	//	    << " eta = " << object.eta() << ", phi = " << object.phi() << std::endl;
+
 	out->push_back(object);
       }
     iEvent.put(out);
