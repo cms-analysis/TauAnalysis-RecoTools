@@ -209,7 +209,7 @@ from TauAnalysis.MCEmbeddingTools.tools.switchInputTags import switchInputTags
  
 #--------------------------------------------------------------------------------
 # import utility function for factorization
-from TauAnalysis.Configuration.factorizationTools import enableFactorization_runZtoMuTau
+from TauAnalysis.Configuration.tools.factorizationTools import enableFactorization_runZtoMuTau
 #
 # define "hook" for enabling/disabling factorization
 # in case running jobs on the CERN batch system
