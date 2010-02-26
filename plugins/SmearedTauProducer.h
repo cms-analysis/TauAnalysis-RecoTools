@@ -1,24 +1,22 @@
 // system include files
 #include <memory>
-#include "TauAnalysis/RecoTools/plugins/SmearedParticleProducer.h"
+#include "TauAnalysis/RecoTools/interface/SmearedParticleMaker.h"
 
-class SmearedTauProducer : public SmearedParticleProducer<pat::Tau,GenJetRetriever<pat::Tau> > {
+class SmearedTauProducer : public edm::EDProducer  {
    public:
   explicit SmearedTauProducer(const edm::ParameterSet& iConfig):
-    SmearedParticleProducer<pat::Tau,GenJetRetriever<pat::Tau> >(iConfig),
+    src_(iConfig.getParameter<edm::InputTag>("src")),  
     smearConstituents_(iConfig.getParameter<bool>("smearConstituents")),  
     hadronEnergyScale_(iConfig.getParameter<double>("hadronEnergyScale")),
     gammaEnergyScale_(iConfig.getParameter<double>("gammaEnergyScale"))
     {
-
+      smearingModule = new SmearedParticleMaker<pat::Tau,GenJetRetriever<pat::Tau> >(iConfig);
+      produces<std::vector<pat::Tau> >();
     }
 
   ~SmearedTauProducer() {}
     
    protected:
-  virtual void beginJob(const edm::EventSetup& es) {}
-  virtual void endJob() {}
-  
   virtual void produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     //std::cout << "<SmearedTauProducer::produce>:" << std::endl;
     //std::cout << "(label = " << moduleLabel_ << ")" << std::endl;
@@ -34,7 +32,7 @@ class SmearedTauProducer : public SmearedParticleProducer<pat::Tau,GenJetRetriev
 	//std::cout << " original object(" << i << "): Pt = " << object.pt() << "," 
 	//	    << " eta = " << object.eta() << ", phi = " << object.phi() << std::endl;
 
-	smear(object);
+	smearingModule->smear(object);
 
         if(smearConstituents_) {
 	  math::XYZTLorentzVector hadronLV;
@@ -65,10 +63,13 @@ class SmearedTauProducer : public SmearedParticleProducer<pat::Tau,GenJetRetriev
 
   
   // ----------member data ---------------------------
-  
+  edm::InputTag src_;           //input Collection
   bool smearConstituents_;
   double hadronEnergyScale_;
   double gammaEnergyScale_;
+  
+  SmearedParticleMaker<pat::Tau,GenJetRetriever<pat::Tau> > *smearingModule;
+
 };
 
 
