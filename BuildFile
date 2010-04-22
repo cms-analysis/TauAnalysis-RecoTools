@@ -7,6 +7,7 @@
 <use name=PhysicsTools/JetMCUtils>
 <use name=SimGeneral/HepPDTRecord>
 <use name=TauAnalysis/GenSimTools>
+<use name=DQMServices/Core>
 <use name=root>
 
 <export>
@@ -22,3 +23,4 @@
   <use name=TauAnalysis/GenSimTools>
   <use name=root>
 </export>
+

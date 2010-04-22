@@ -12,7 +12,9 @@
   <use name=PhysicsTools/IsolationAlgos>
   <use name=PhysicsTools/PatUtils>
   <use name=PhysicsTools/UtilAlgos>
+  <use name=CommonTools/UtilAlgos>
   <use name=PhysicsTools/Utilities>
+  <use name=CommonTools/Utils>
   <use name=SimGeneral/HepPDTRecord>
   <use name=AnalysisDataFormats/TauAnalysis>
   <use name=TauAnalysis/CandidateTools>
