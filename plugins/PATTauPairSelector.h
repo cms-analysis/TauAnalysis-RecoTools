@@ -1,5 +1,5 @@
 //
-// $Id: PATTauPairSelector.h,v 1.1 2009/02/04 17:32:15 veelken Exp $
+// $Id: PATTauPairSelector.h,v 1.1 2009/06/10 09:33:53 veelken Exp $
 //
 
 #ifndef TauAnalysis_RecoTools_PATTauPairSelector_h
@@ -7,10 +7,10 @@
 
 #include "DataFormats/Common/interface/RefVector.h"
 
-#include "PhysicsTools/UtilAlgos/interface/StringCutObjectSelector.h"
-#include "PhysicsTools/UtilAlgos/interface/SingleObjectSelector.h"
-#include "PhysicsTools/UtilAlgos/interface/ObjectSelector.h"
-#include "PhysicsTools/UtilAlgos/interface/SingleElementCollectionSelector.h"
+#include "CommonTools/UtilAlgos/interface/StringCutObjectSelector.h"
+#include "CommonTools/UtilAlgos/interface/SingleObjectSelector.h"
+#include "CommonTools/UtilAlgos/interface/ObjectSelector.h"
+#include "CommonTools/UtilAlgos/interface/SingleElementCollectionSelector.h"
 
 #include "AnalysisDataFormats/TauAnalysis/interface/CompositePtrCandidateT1T2MEt.h"
 
