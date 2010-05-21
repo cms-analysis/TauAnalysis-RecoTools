@@ -13,7 +13,7 @@
 //
 // Original Author:  Manuel Zeise
 //         Created:  Mo Nov 16 10:12:40 CET 2009
-// $Id$
+// $Id: METSmearer.cc,v 1.1 2010/01/12 07:19:24 zeise Exp $
 //
 //
 
@@ -53,7 +53,7 @@
 #include "DataFormats/TauReco/interface/PFTauDiscriminator.h"
 
 //
-// class decleration
+// class declaration
 //
 
 template <class TauClass, class JetClass, class TowerClass, class TauDiscriminatorClass, class METClass>
@@ -110,7 +110,7 @@ class METSmearer : public edm::EDProducer {
 // constructors and destructor
 //
 template <class TauClass, class JetClass, class TowerClass, class TauDiscriminatorClass, class METClass>
-METSmearer<TauClass, JetClass, TowerClass, TauDiscriminatorClass, METClass>::METSmearer<TauClass, JetClass, TowerClass, TauDiscriminatorClass, METClass>(const edm::ParameterSet& iConfig)
+METSmearer<TauClass, JetClass, TowerClass, TauDiscriminatorClass, METClass>::METSmearer(const edm::ParameterSet& iConfig)
 {
 	jetTag_ 	= iConfig.getParameter< edm::InputTag > ("jetTag");
 	metTag_ 	= iConfig.getParameter< edm::InputTag > ("metTag");
@@ -172,7 +172,7 @@ METSmearer<TauClass, JetClass, TowerClass, TauDiscriminatorClass, METClass>::MET
 
 
 template <class TauClass, class JetClass, class TowerClass, class TauDiscriminatorClass, class METClass>
-METSmearer<TauClass, JetClass, TowerClass, TauDiscriminatorClass, METClass>::~METSmearer<TauClass, JetClass, TowerClass, TauDiscriminatorClass, METClass>()
+METSmearer<TauClass, JetClass, TowerClass, TauDiscriminatorClass, METClass>::~METSmearer()
 {
    // do anything here that needs to be done at desctruction time
    // (e.g. close files, deallocate resources etc.)
@@ -519,9 +519,13 @@ void METSmearer<TauClass, JetClass, TowerClass, TauDiscriminatorClass, METClass>
 }
 
 //define this as a plug-in
+
+#include "FWCore/Framework/interface/MakerMacros.h"
+
 typedef METSmearer<reco::CaloTau, reco::CaloJet, CaloTower, reco::CaloTauDiscriminator, reco::CaloMET> TauAnalysisRecoToolsCaloMETSmearer;
 typedef METSmearer<PFTau, PFJet, CaloTower, reco::PFTauDiscriminator, reco::PFMET> TauAnalysisRecoToolsPFMETSmearer;
 typedef METSmearer<reco::PFTau, reco::CaloJet, CaloTower, reco::PFTauDiscriminator, reco::CaloMET> TauAnalysisRecoToolsPFTauCaloMETSmearer;
+
 DEFINE_FWK_MODULE(TauAnalysisRecoToolsCaloMETSmearer);
 DEFINE_FWK_MODULE(TauAnalysisRecoToolsPFMETSmearer);
 DEFINE_FWK_MODULE(TauAnalysisRecoToolsPFTauCaloMETSmearer);

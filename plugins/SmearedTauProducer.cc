@@ -59,8 +59,6 @@ SmearedTauProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     iEvent.put(out);
 } 
 
-
-
-
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_ANOTHER_FWK_MODULE(SmearedTauProducer);
+
+DEFINE_FWK_MODULE(SmearedTauProducer);

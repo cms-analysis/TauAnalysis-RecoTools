@@ -11,7 +11,7 @@ typedef CompositePtrCandidateT1T2MEtProducer<pat::Electron, pat::Muon> PATElecMu
 
 #include "FWCore/Framework/interface/MakerMacros.h"
 
-DEFINE_ANOTHER_FWK_MODULE(PATElecTauPairProducer);
-DEFINE_ANOTHER_FWK_MODULE(PATMuTauPairProducer);
-DEFINE_ANOTHER_FWK_MODULE(PATDiTauPairProducer);
-DEFINE_ANOTHER_FWK_MODULE(PATElecMuPairProducer);
+DEFINE_FWK_MODULE(PATElecTauPairProducer);
+DEFINE_FWK_MODULE(PATMuTauPairProducer);
+DEFINE_FWK_MODULE(PATDiTauPairProducer);
+DEFINE_FWK_MODULE(PATElecMuPairProducer);
