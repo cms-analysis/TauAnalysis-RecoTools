@@ -7,16 +7,16 @@
  * \author Michail Bachtis,
  *         Christian Veelken
  *
- * \version $Revision: 1.21 $
+ * \version $Revision: 1.1 $
  *
- * $Id: PATMuonVbTfSelector.h,v 1.21 2010/09/24 10:10:54 veelken Exp $
+ * $Id: PATMuonVbTfSelector.h,v 1.1 2010/09/26 16:55:30 veelken Exp $
  *
  */
 
 #include "FWCore/Framework/interface/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/ParameterSet/interface/InputTag.h"
+#include "FWCore/Utilities/interface/InputTag.h"
 
 #include "DataFormats/PatCandidates/interface/Muon.h"
 
