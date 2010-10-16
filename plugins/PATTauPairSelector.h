@@ -1,5 +1,5 @@
 //
-// $Id: PATTauPairSelector.h,v 1.1 2009/06/10 09:33:53 veelken Exp $
+// $Id: PATTauPairSelector.h,v 1.2 2010/04/28 14:51:15 jkolb Exp $
 //
 
 #ifndef TauAnalysis_RecoTools_PATTauPairSelector_h
@@ -32,6 +32,14 @@ typedef SingleObjectSelector<
             std::vector<PATElecMuPair>,
             StringCutObjectSelector<PATElecMuPair>
         > PATElecMuPairSelector;
+typedef SingleObjectSelector<
+            std::vector<PATDiElecPair>,
+            StringCutObjectSelector<PATDiElecPair>
+        > PATDiElecPairSelector;
+typedef SingleObjectSelector<
+            std::vector<PATDiMuPair>,
+            StringCutObjectSelector<PATDiMuPair>
+        > PATDiMuPairSelector;
 
 typedef SingleObjectSelector<
             std::vector<PATElecTauPair>,
@@ -53,5 +61,15 @@ typedef SingleObjectSelector<
             StringCutObjectSelector<PATElecMuPair>,
             edm::RefVector<std::vector<PATElecMuPair> >
         > PATElecMuPairRefSelector;
+typedef SingleObjectSelector<
+            std::vector<PATDiElecPair>,
+            StringCutObjectSelector<PATDiElecPair>,
+            edm::RefVector<std::vector<PATDiElecPair> >
+        > PATDiElecPairRefSelector;
+typedef SingleObjectSelector<
+            std::vector<PATDiMuPair>,
+            StringCutObjectSelector<PATDiMuPair>,
+            edm::RefVector<std::vector<PATDiMuPair> >
+        > PATDiMuPairRefSelector;
 
 #endif
