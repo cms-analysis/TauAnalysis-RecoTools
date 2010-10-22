@@ -18,5 +18,6 @@
   <use name=SimGeneral/HepPDTRecord>
   <use name=AnalysisDataFormats/TauAnalysis>
   <use name=TauAnalysis/CandidateTools>
+  <use name=TauAnalysis/BgEstimationTools>
   <use name=root>
 </library>
