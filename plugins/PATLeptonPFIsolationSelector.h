@@ -8,19 +8,20 @@
  * a pat::Electron, pat::Muon or pat::Tau passed the selection
  * if the sum of deposits of the speficied type and with Pt > ptMin 
  * in an annulus within dRvetoCone (inner cone) and dRisoCone (outer cone)
- * is less than sumPtMax and the number of such deposits is less than numMax
+ * is more than sumPtMin and less than sumPtMax 
  * 
  * \author Christian Veelken, UC Davis
  *
- * \version $Revision: 1.4 $
+ * \version $Revision: 1.1 $
  *
- * $Id: PATLeptonPFIsolationSelector.h,v 1.4 2010/03/29 17:08:41 veelken Exp $
+ * $Id: PATLeptonPFIsolationSelector.h,v 1.1 2010/10/14 09:01:25 veelken Exp $
  *
  */
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/Utilities/interface/InputTag.h"
 #include "DataFormats/Common/interface/Handle.h"
 
 #include "DataFormats/Candidate/interface/Particle.h"
@@ -104,6 +105,7 @@ class PATLeptonPFIsolationSelector
   pfIsoConfigType* pfNeutralHadronIso_;
   pfIsoConfigType* pfPhotonIso_;
 
+  double sumPtMin_;
   double sumPtMax_;
   
   enum { kAbsoluteIso, kRelativeIso };
