@@ -23,10 +23,12 @@ selectedPrimaryVertexQuality = cms.EDFilter("VertexSelector",
 
 selectedPrimaryVertexPosition = cms.EDFilter("VertexSelector",
     src = cms.InputTag('selectedPrimaryVertexQuality'),
-    cut = cms.string("z > -25 & z < +25"),
+    cut = cms.string("z > -25 & z < +25 & position.Rho < 2."),
     filter = cms.bool(False)                                           
 )
 
-selectPrimaryVertex = cms.Sequence( selectedPrimaryVertexHighestPtTrackSum
-                                   *selectedPrimaryVertexQuality
-                                   *selectedPrimaryVertexPosition )
+selectPrimaryVertex = cms.Sequence(
+    selectedPrimaryVertexHighestPtTrackSum
+   * selectedPrimaryVertexQuality
+   * selectedPrimaryVertexPosition
+)
