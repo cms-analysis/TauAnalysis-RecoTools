@@ -15,7 +15,7 @@
  *
  * \version $Revision: 1.1 $
  *
- * $Id: SmearedMETProducer.h,v 1.1 2010/10/14 09:01:25 veelken Exp $
+ * $Id: SmearedMETProducer.h,v 1.1 2010/10/22 12:16:51 veelken Exp $
  *
  */
 
@@ -24,7 +24,6 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/InputTag.h"
-#include "DataFormats/Common/interface/Handle.h"
 
 #include "TauAnalysis/BgEstimationTools/interface/ObjValExtractorBase.h"
 

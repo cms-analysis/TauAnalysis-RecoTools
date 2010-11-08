@@ -2,6 +2,7 @@
 
 #include "DataFormats/PatCandidates/interface/MET.h"
 #include "DataFormats/Candidate/interface/Particle.h"
+#include "DataFormats/Common/interface/Handle.h"
 
 #include <TMath.h>
 
@@ -33,7 +34,7 @@ SmearedMETProducer::SmearedMETProducer(const edm::ParameterSet& cfg)
     extraSmearing_ = new extraCorrType(cfgExtraSmearing);
   }
 
-  produces<pat::METCollection >();
+  produces<pat::METCollection>();
 }
 
 SmearedMETProducer::~SmearedMETProducer()
