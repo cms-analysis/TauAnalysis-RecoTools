@@ -11,7 +11,7 @@
  *
  * \version $Revision: 1.1 $
  *
- * $Id: ZllT1T2RecoilCorrection.h,v 1.1 2010/10/22 12:16:51 veelken Exp $
+ * $Id: ZllT1T2RecoilCorrection.h,v 1.1 2010/11/10 08:25:43 veelken Exp $
  *
  */
 
@@ -39,9 +39,8 @@ class ZllT1T2RecoilCorrection : public edm::EDProducer
   typedef CompositePtrCandidateT1T2MEt<T1,T2> CompositePtrCandidate;
   typedef std::vector<CompositePtrCandidate> CompositePtrCandidateCollection;
   typedef edm::RefProd<CompositePtrCandidateCollection> CompositePtrCandidateRefProd;
-  typedef edm::Ptr<pat::MET> patMEtPtr;
-  typedef std::vector<patMEtPtr> patMEtPtrCollection;
-  typedef edm::AssociationVector<CompositePtrCandidateRefProd, patMEtPtrCollection> diTauToMEtAssociation;
+  typedef std::vector<int> vint;
+  typedef edm::AssociationVector<CompositePtrCandidateRefProd, vint> diTauToMEtAssociation;
 
  public:
   explicit ZllT1T2RecoilCorrection(const edm::ParameterSet&);
@@ -52,8 +51,6 @@ class ZllT1T2RecoilCorrection : public edm::EDProducer
  private:
 
 //--- configuration parameters
-
-  std::string moduleLabel_;
 
   // collection of diTau objects representing Z --> l+ l- candidates
   edm::InputTag src_;
@@ -97,18 +94,6 @@ class ZllT1T2RecoilCorrection : public edm::EDProducer
 
   corrParameterType* corrParameterData_;
   corrParameterType* corrParameterMC_;
-
-  // configuration parameters needed for recreation of diTau candidates
-  // (if requested)
-  bool recreateDiTauCandidates_;
-
-  CompositePtrCandidate recreateDiTauCandidate(edm::Event&, const edm::EventSetup&, const CompositePtrCandidate&, edm::Ptr<reco::MET>&);
-
-  CompositePtrCandidateT1T2MEtAlgorithm<T1,T2>* diTauAlgorithm_;
-
-  edm::InputTag srcGenParticles_;
-  edm::InputTag srcPV_;
-  edm::InputTag srcBeamSpot_;
 };
 
 #endif
