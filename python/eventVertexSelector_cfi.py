@@ -17,13 +17,13 @@ selectedPrimaryVertexHighestPtTrackSum = cms.EDFilter("PATSingleVertexSelector",
 
 selectedPrimaryVertexQuality = cms.EDFilter("VertexSelector",
     src = cms.InputTag('selectedPrimaryVertexHighestPtTrackSum'),
-    cut = cms.string("isValid & (chi2prob(chi2,ndof) > 0.01) & (tracksSize >= 2)"),
+    cut = cms.string("isValid & ndof >= 4"),
     filter = cms.bool(False)                                          
 )
 
 selectedPrimaryVertexPosition = cms.EDFilter("VertexSelector",
     src = cms.InputTag('selectedPrimaryVertexQuality'),
-    cut = cms.string("z > -25 & z < +25 & position.Rho < 2."),
+    cut = cms.string("z > -24 & z < +24 & position.Rho < 2."),
     filter = cms.bool(False)                                           
 )
 
