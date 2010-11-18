@@ -9,14 +9,8 @@ import copy
 # Note: offlinePrimaryVerticesWithBS collection is sorted
 #       in order of decreasing sum of Pt of tracks fitted to each vertex
 
-selectedPrimaryVertexHighestPtTrackSum = cms.EDFilter("PATSingleVertexSelector",
-    mode = cms.string('firstVertex'),
-    vertices = cms.InputTag('offlinePrimaryVerticesWithBS'),
-    filter = cms.bool(False)                                                    
-)
-
 selectedPrimaryVertexQuality = cms.EDFilter("VertexSelector",
-    src = cms.InputTag('selectedPrimaryVertexHighestPtTrackSum'),
+    src = cms.InputTag('offlinePrimaryVerticesWithBS'),
     cut = cms.string("isValid & ndof >= 4"),
     filter = cms.bool(False)                                          
 )
@@ -27,8 +21,14 @@ selectedPrimaryVertexPosition = cms.EDFilter("VertexSelector",
     filter = cms.bool(False)                                           
 )
 
+selectedPrimaryVertexHighestPtTrackSum = cms.EDFilter("PATSingleVertexSelector",
+    mode = cms.string('firstVertex'),
+    vertices = cms.InputTag('selectedPrimaryVertexPosition'),
+    filter = cms.bool(False)                                                    
+)
+
 selectPrimaryVertex = cms.Sequence(
-    selectedPrimaryVertexHighestPtTrackSum
-   * selectedPrimaryVertexQuality
+    selectedPrimaryVertexQuality
    * selectedPrimaryVertexPosition
+   * selectedPrimaryVertexHighestPtTrackSum
 )
