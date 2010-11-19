@@ -10,6 +10,9 @@
 const std::string instNameMEtObjects = "met";
 const std::string instNameDiTauToMEtAssociations = "diTauToMEtAssociations";
 
+const double sigmaU1min = 5.0;
+const double sigmaU2min = 5.0;
+
 template <typename T1, typename T2>
 ZllT1T2RecoilCorrection<T1,T2>::ZllT1T2RecoilCorrection(const edm::ParameterSet& cfg)
   : corrParameterData_(0),
@@ -42,6 +45,8 @@ std::pair<double, double> ZllT1T2RecoilCorrection<T1,T2>::compSigma(const corrPa
 {
   double sigmaU1 = corrParameter.sigma1_*(1. + corrParameter.b1_*qT + corrParameter.c1_*qT*qT);
   double sigmaU2 = corrParameter.sigma2_*(1. + corrParameter.b2_*qT + corrParameter.c2_*qT*qT);
+  if ( sigmaU1 < sigmaU1min ) sigmaU1 = sigmaU1min;
+  if ( sigmaU2 < sigmaU2min ) sigmaU2 = sigmaU2min;
   return std::pair<double, double> (sigmaU1, sigmaU2);
 }
 
