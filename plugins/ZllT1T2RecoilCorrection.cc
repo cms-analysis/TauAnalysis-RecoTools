@@ -20,6 +20,11 @@ ZllT1T2RecoilCorrection<T1,T2>::ZllT1T2RecoilCorrection(const edm::ParameterSet&
 {
   src_ = cfg.getParameter<edm::InputTag>("src");
 
+  if ( cfg.exists("srcGenParticles") ) {
+    srcGenParticles_ = cfg.getParameter<edm::InputTag>("srcGenParticles");
+    genParticlePdgIds_ = cfg.getParameter<vint>("genParticlePdgIds");
+  }
+
   edm::ParameterSet cfgCorrParameter = cfg.getParameter<edm::ParameterSet>("parameter"); 
   corrParameterData_ = new corrParameterType(cfgCorrParameter.getParameter<edm::ParameterSet>("data"));
   corrParameterMC_ = new corrParameterType(cfgCorrParameter.getParameter<edm::ParameterSet>("mc"));
@@ -50,6 +55,35 @@ std::pair<double, double> ZllT1T2RecoilCorrection<T1,T2>::compSigma(const corrPa
   return std::pair<double, double> (sigmaU1, sigmaU2);
 }
 
+reco::Candidate::LorentzVector getGenP4AfterRadiation(const reco::GenParticle& genMother)
+{
+  size_t numDaughters = genMother.numberOfDaughters();
+  for ( size_t iDaughter = 0; iDaughter < numDaughters; ++iDaughter ) {
+    const reco::GenParticle* genDaughter = dynamic_cast<const reco::GenParticle*>(genMother.daughter(iDaughter));
+    if ( genDaughter->pdgId() == genMother.pdgId() ) return getGenP4AfterRadiation(*genDaughter);
+  }
+  
+  return genMother.p4();
+}
+
+reco::Candidate::LorentzVector getP4GenBoson(const reco::GenParticleCollection& genParticles, 
+					     const std::vector<int>& genParticlePdgIds, bool& p4GenBoson_initialized)
+{
+  for ( std::vector<int>::const_iterator genParticlePdgId = genParticlePdgIds.begin();
+	genParticlePdgId != genParticlePdgIds.end(); ++genParticlePdgId ) {
+    for ( reco::GenParticleCollection::const_iterator genParticle = genParticles.begin();
+	  genParticle != genParticles.end(); ++genParticle ) {
+      if ( TMath::Abs(genParticle->pdgId()) == TMath::Abs(*genParticlePdgId) ) {
+	p4GenBoson_initialized = true;
+	return getGenP4AfterRadiation(*genParticle);
+      }
+    }
+  }
+  
+  p4GenBoson_initialized = false;
+  return reco::Candidate::LorentzVector(0,0,0,0);
+}
+
 template <typename T1, typename T2>
 void ZllT1T2RecoilCorrection<T1,T2>::produce(edm::Event& evt, const edm::EventSetup& es)
 {
@@ -65,6 +99,14 @@ void ZllT1T2RecoilCorrection<T1,T2>::produce(edm::Event& evt, const edm::EventSe
   std::auto_ptr<diTauToMEtAssociation> correctedMEtAssociations(new diTauToMEtAssociation(CompositePtrCandidateRefProd(diTauCollection)));
 
   edm::RefProd<pat::METCollection> correctedMEtRefProd = evt.getRefBeforePut<pat::METCollection>("met");
+
+  reco::Candidate::LorentzVector p4GenBoson;
+  bool p4GenBoson_initialized = false;
+  edm::Handle<reco::GenParticleCollection> genParticles;
+  if ( srcGenParticles_.label() != "" ) {
+    evt.getByLabel(srcGenParticles_, genParticles);
+    p4GenBoson = getP4GenBoson(*genParticles, genParticlePdgIds_, p4GenBoson_initialized);
+  }
 
   size_t numDiTauCandidates = diTauCollection->size();
   for ( size_t iDiTauCandidate = 0; iDiTauCandidate < numDiTauCandidates; ++iDiTauCandidate ) {
@@ -82,9 +124,11 @@ void ZllT1T2RecoilCorrection<T1,T2>::produce(edm::Event& evt, const edm::EventSe
 
     //std::cout << " MEt: px = " << diTauCandidate.met()->px() << ", py = " << diTauCandidate.met()->py() << std::endl;
 
-    double qX = diTauCandidate.p4gen().px();
-    double qY = diTauCandidate.p4gen().py();
-    double qT = diTauCandidate.p4gen().pt();
+    reco::Candidate::LorentzVector q = ( p4GenBoson_initialized ) ? p4GenBoson : diTauCandidate.p4gen();
+
+    double qX = q.px();
+    double qY = q.py();
+    double qT = q.pt();
 
     //std::cout << " qT = " << qT << " (qX = " << qX << ", qY = " << qY << ")" << std::endl;
 
@@ -96,7 +140,7 @@ void ZllT1T2RecoilCorrection<T1,T2>::produce(edm::Event& evt, const edm::EventSe
       std::pair<double, double> uTgen = compMEtProjU(diTauCandidate.p4gen(), 
 						     0., 0., errorFlag); // MEt resolution parameters determined 
                                                                          // from Z --> mu+ mu- events;
-                                                                         // assume MEt to be zero in **those** events
+                                                                         // assume "true" MEt to be zero in **those** events
       double u1rec = uTrec.first;
       double u1gen = uTgen.first;
       double u2rec = uTrec.second;

@@ -9,9 +9,9 @@
  * 
  * \author Christian Veelken, UC Davis
  *
- * \version $Revision: 1.1 $
+ * \version $Revision: 1.2 $
  *
- * $Id: ZllT1T2RecoilCorrection.h,v 1.1 2010/11/10 08:25:43 veelken Exp $
+ * $Id: ZllT1T2RecoilCorrection.h,v 1.2 2010/11/10 16:44:16 veelken Exp $
  *
  */
 
@@ -54,6 +54,11 @@ class ZllT1T2RecoilCorrection : public edm::EDProducer
 
   // collection of diTau objects representing Z --> l+ l- candidates
   edm::InputTag src_;
+
+  // collection of gen. particles for determining Z/W/H Pt
+  // used in parametrization of recoil correction
+  edm::InputTag srcGenParticles_;
+  vint genParticlePdgIds_;
 
   // MEt resolution parameters for MC/Data
   struct corrParameterType
