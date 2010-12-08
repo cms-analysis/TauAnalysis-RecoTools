@@ -16,6 +16,8 @@
   <use name=PhysicsTools/Utilities>
   <use name=CommonTools/Utils>
   <use name=CommonTools/UtilAlgos>
+  <use name=CondFormats/JetMETObjects>
+  <use name=JetMETCorrections/Objects>
   <use name=SimGeneral/HepPDTRecord>
   <use name=TrackingTools/TransientTrack>
   <use name=TrackingTools/Records>
