@@ -1,62 +1,88 @@
 #include "TauAnalysis/RecoTools/plugins/SmearedTauProducer.h"
 
-SmearedTauProducer::SmearedTauProducer(const edm::ParameterSet& iConfig):
-    src_(iConfig.getParameter<edm::InputTag>("src")),  
-    smearConstituents_(iConfig.getParameter<bool>("smearConstituents")),  
-    hadronEnergyScale_(iConfig.getParameter<double>("hadronEnergyScale")),
-    gammaEnergyScale_(iConfig.getParameter<double>("gammaEnergyScale"))
-    {
-      smearingModule = new SmearedParticleMaker<pat::Tau,GenJetRetriever<pat::Tau> >(iConfig);
-      produces<std::vector<pat::Tau> >();
-    }
+#include "JetMETCorrections/Objects/interface/JetCorrector.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
+#include "JetMETCorrections/Objects/interface/JetCorrectionsRecord.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
+#include "FWCore/Framework/interface/ESHandle.h"
 
+#include "DataFormats/PatCandidates/interface/Tau.h"
+#include "DataFormats/Candidate/interface/Particle.h"
+
+#include <TMath.h>
+
+SmearedTauProducer::SmearedTauProducer(const edm::ParameterSet& cfg)
+  : src_(cfg.getParameter<edm::InputTag>("src")),
+    shiftByJECuncertainty_(0.),
+    smearingModule_(0) 
+{
+  if ( cfg.exists("shiftByJECuncertainty") ) {
+    shiftByJECuncertainty_ = cfg.getParameter<double>("shiftByJECuncertainty");
+
+    jetCorrPayloadName_ = cfg.getParameter<std::string>("jetCorrPayloadName");
+    jetCorrUncertaintyTag_ = cfg.getParameter<std::string>("jetCorrUncertaintyTag");
+
+    jecFlavorUncertainty_ = cfg.getParameter<double>("jecFlavorUncertainty");
+  }
+
+  if ( cfg.exists("fileName") ) {
+    smearingModule_ = new SmearedParticleMaker<pat::Tau, GenJetRetriever<pat::Tau> >(cfg);
+  }
+
+  produces<pat::TauCollection>();
+}
 
 SmearedTauProducer::~SmearedTauProducer()
-{}
+{
+  delete smearingModule_;
+}
 
-void 
-SmearedTauProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
-    //std::cout << "<SmearedTauProducer::produce>:" << std::endl;
-    //std::cout << "(label = " << moduleLabel_ << ")" << std::endl;
+void SmearedTauProducer::produce(edm::Event& evt, const edm::EventSetup& es) 
+{
+  std::auto_ptr<pat::TauCollection> smearedTaus(new pat::TauCollection);
+  
+  edm::Handle<pat::TauCollection> patTaus;
+  evt.getByLabel(src_, patTaus);
+  
+  JetCorrectionUncertainty* jecUncertainty = 0;
+  if ( shiftByJECuncertainty_ != 0. ) {
+    edm::ESHandle<JetCorrectorParametersCollection> jetCorrParameterSet;
+    es.get<JetCorrectionsRecord>().get(jetCorrPayloadName_, jetCorrParameterSet); 
+    const JetCorrectorParameters& jetCorrParameters = (*jetCorrParameterSet)[jetCorrUncertaintyTag_];
+    jecUncertainty = new JetCorrectionUncertainty(jetCorrParameters);
+  }
 
-    using namespace edm;
-    using namespace reco;
+  for ( pat::TauCollection::const_iterator patTau = patTaus->begin();
+	patTau != patTaus->end(); ++patTau ) {
+    pat::Tau smearedTau = (*patTau);
+    
+    if ( shiftByJECuncertainty_ != 0. ) {
+      jecUncertainty->setJetEta(patTau->eta());
+      jecUncertainty->setJetPt(patTau->pt());
+      double shift = shiftByJECuncertainty_*jecUncertainty->getUncertainty(true);
 
-    std::auto_ptr<std::vector<pat::Tau> > out(new std::vector<pat::Tau> );
-    Handle<std::vector<pat::Tau> > srcH;
-    if(iEvent.getByLabel(src_,srcH) &&srcH->size()>0) 
-      for(unsigned int i=0;i<srcH->size();++i) {
-	pat::Tau object = srcH->at(i);
-	//std::cout << " original object(" << i << "): Pt = " << object.pt() << "," 
-	//	    << " eta = " << object.eta() << ", phi = " << object.phi() << std::endl;
+//--- add flaor uncertainty
+//   (to account for difference in uncertainty on jet response
+//    between tau-jets and quark/gluon jets)
+      shift = TMath::Sqrt(shift*shift + jecFlavorUncertainty_*jecFlavorUncertainty_);
+      
+      reco::Particle::LorentzVector patTauP4 = patTau->p4();
+      smearedTau.setP4((1. + shift)*patTauP4);
 
-	smearingModule->smear(object);
+      std::cout << "patTau: Pt = " << patTau->pt() << "," 
+		<< " eta = " << patTau->eta() << ", phi = " << patTau->phi() << std::endl;
+      std::cout << "smearedTau: Pt = " << smearedTau.pt() << "," 
+		<< " eta = " << smearedTau.eta() << ", phi = " << smearedTau.phi() << std::endl;
+    }
 
-        if(smearConstituents_) {
-	  math::XYZTLorentzVector hadronLV;
-	  PFCandidateRefVector hadrons = object.signalPFChargedHadrCands();
-
-	  if(hadrons.size()>0)
-	    for(unsigned int i=0;i<hadrons.size();++i)
-	      hadronLV+=hadrons.at(i)->p4();
-	  //apply hadron energy scale
-	  hadronLV=hadronEnergyScale_*hadronLV;
-	  math::XYZTLorentzVector gammaLV;
-	  PFCandidateRefVector gammas = object.signalPFGammaCands();
-
-	  if(gammas.size()>0)
-	    for(unsigned int i=0;i<gammas.size();++i)
-	      gammaLV+=gammas.at(i)->p4();
-	  gammaLV=gammaEnergyScale_*gammaLV;
- 	  object.setP4(gammaLV+hadronLV);
-	}
-	
-	//std::cout << "smeared object(" << i << "): Pt = " << object.pt() << "," 
-	//	    << " eta = " << object.eta() << ", phi = " << object.phi() << std::endl;
-
-	out->push_back(object);
-      }
-    iEvent.put(out);
+    smearingModule_->smear(smearedTau);
+    
+    smearedTaus->push_back(smearedTau);
+  }
+  
+  evt.put(smearedTaus);
+  
+  delete jecUncertainty;
 } 
 
 #include "FWCore/Framework/interface/MakerMacros.h"
