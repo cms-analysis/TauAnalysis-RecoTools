@@ -7,13 +7,15 @@
 	   Christian Veelken, UC Davis
 */
 
-#include "TauAnalysis/RecoTools/interface/SmearedParticleMaker.h"
-
 #include "FWCore/Framework/interface/EDProducer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Utilities/interface/InputTag.h"
+
+#include "CondFormats/JetMETObjects/interface/JetCorrectionUncertainty.h"
+
+#include "TauAnalysis/RecoTools/interface/SmearedParticleMaker.h"
 
 #include <string>
 
@@ -28,6 +30,10 @@ class SmearedJetProducer : public edm::EDProducer
 
 // ----------member data ---------------------------
   edm::InputTag src_; // input collection
+
+  JetCorrectionUncertainty* jecUncertainty_;
+
+  bool isJECuncertaintyFromFile_;
 
   double shiftByJECuncertainty_;
 
