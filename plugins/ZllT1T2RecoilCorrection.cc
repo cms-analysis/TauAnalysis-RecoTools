@@ -16,7 +16,10 @@ const double sigmaU2min = 5.0;
 template <typename T1, typename T2>
 ZllT1T2RecoilCorrection<T1,T2>::ZllT1T2RecoilCorrection(const edm::ParameterSet& cfg)
   : corrParameterData_(0),
-    corrParameterMC_(0)
+    corrParameterMC_(0),
+    corrUncertaintyData_(0),
+    corrUncertaintyMC_(0),
+    shiftByUncertainty_(0.)
 {
   src_ = cfg.getParameter<edm::InputTag>("src");
 
@@ -33,6 +36,19 @@ ZllT1T2RecoilCorrection<T1,T2>::ZllT1T2RecoilCorrection(const edm::ParameterSet&
   //corrParameterData_->print();
   //std::cout << "corr. Parameter(MC):" << std::endl;
   //corrParameterMC_->print();
+
+  if ( cfg.exists("shiftByUncertainty") && cfg.getParameter<double>("shiftByUncertainty") != 0. ) {
+    edm::ParameterSet cfgCorrUncertainty = cfg.getParameter<edm::ParameterSet>("uncertainties"); 
+    corrUncertaintyData_ = new corrParameterType(cfgCorrUncertainty.getParameter<edm::ParameterSet>("data"));
+    corrUncertaintyMC_ = new corrParameterType(cfgCorrUncertainty.getParameter<edm::ParameterSet>("mc"));
+
+    //std::cout << "corr. Uncertainty(Data):" << std::endl;
+    //corrUncertaintyData_->print();
+    //std::cout << "corr. Uncertainty(MC):" << std::endl;
+    //corrUncertaintyMC_->print();
+
+    shiftByUncertainty_ = cfg.getParameter<double>("shiftByUncertainty");
+  }
 
   produces<pat::METCollection>(instNameMEtObjects);
   produces<diTauToMEtAssociation>(instNameDiTauToMEtAssociations);
@@ -82,6 +98,11 @@ reco::Candidate::LorentzVector getP4GenBoson(const reco::GenParticleCollection& 
   
   p4GenBoson_initialized = false;
   return reco::Candidate::LorentzVector(0,0,0,0);
+}
+
+double square(double x)
+{
+  return x*x;
 }
 
 template <typename T1, typename T2>
@@ -170,8 +191,34 @@ void ZllT1T2RecoilCorrection<T1,T2>::produce(edm::Event& evt, const edm::EventSe
       double dDiff = corrParameterData_->d_ - corrParameterMC_->d_;
       double kDiff = corrParameterData_->k_ - corrParameterMC_->k_;
       u1rec_corrected += dDiff + kDiff*qT;
-      
+
       //std::cout << "--> rec(corrected): u1 = " << u1rec_corrected << ", u2 = " << u2rec_corrected << std::endl;
+
+      if ( shiftByUncertainty_ != 0. ) {
+	//std::cout << " shiftByUncertainty = " << shiftByUncertainty_ << std::endl;
+	double u1Err2 = square(u1rec - u1gen)
+	  *(square(corrParameterData_->sigma1_/u1sigmaMC)
+           *(square(corrUncertaintyData_->b1_*qT) + square(corrUncertaintyData_->c1_*qT*qT))
+	  + square(u1sigmaData*corrParameterMC_->sigma1_/square(u1sigmaMC))
+	   *(square(corrUncertaintyMC_->b1_*qT) + square(corrUncertaintyMC_->c1_*qT*qT))
+	  + square(u1sigmaCorr)
+           *(square(corrUncertaintyData_->sigma1_/corrParameterData_->sigma1_) 
+	    + square(corrUncertaintyMC_->sigma1_/corrParameterMC_->sigma1_)));
+        u1Err2 += square(corrUncertaintyData_->d_) + square(corrUncertaintyMC_->d_)
+   	         + square(corrUncertaintyData_->k_*qT) + square(corrUncertaintyMC_->k_*qT);
+	u1rec_corrected += shiftByUncertainty_*TMath::Sqrt(u1Err2);
+        double u2Err2 = square(u2rec - u2gen)
+	  *(square(corrParameterData_->sigma2_/u2sigmaMC)
+           *(square(corrUncertaintyData_->b2_*qT) + square(corrUncertaintyData_->c2_*qT*qT))
+	  + square(u2sigmaData*corrParameterMC_->sigma2_/square(u2sigmaMC))
+	   *(square(corrUncertaintyMC_->b2_*qT) + square(corrUncertaintyMC_->c2_*qT*qT))
+	  + square(u2sigmaCorr)
+           *(square(corrUncertaintyData_->sigma2_/corrParameterData_->sigma2_) 
+	    + square(corrUncertaintyMC_->sigma2_/corrParameterMC_->sigma2_)));
+	u2rec_corrected += shiftByUncertainty_*TMath::Sqrt(u2Err2);
+      }
+      
+      //std::cout << "--> rec(corrected, after shift): u1 = " << u1rec_corrected << ", u2 = " << u2rec_corrected << std::endl;
 
       double uXrec_corrected = (u1rec_corrected*qX + u2rec_corrected*qY)/qT;
       double uYrec_corrected = (u1rec_corrected*qY - u2rec_corrected*qX)/qT;

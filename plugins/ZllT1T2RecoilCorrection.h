@@ -9,9 +9,9 @@
  * 
  * \author Christian Veelken, UC Davis
  *
- * \version $Revision: 1.2 $
+ * \version $Revision: 1.3 $
  *
- * $Id: ZllT1T2RecoilCorrection.h,v 1.2 2010/11/10 16:44:16 veelken Exp $
+ * $Id: ZllT1T2RecoilCorrection.h,v 1.3 2010/12/03 17:15:34 veelken Exp $
  *
  */
 
@@ -99,6 +99,11 @@ class ZllT1T2RecoilCorrection : public edm::EDProducer
 
   corrParameterType* corrParameterData_;
   corrParameterType* corrParameterMC_;
+
+  corrParameterType* corrUncertaintyData_;
+  corrParameterType* corrUncertaintyMC_;
+
+  double shiftByUncertainty_;
 };
 
 #endif
