@@ -9,8 +9,6 @@
 typedef edm::View<reco::Candidate> recoCandidateView;
 
 SmearedMETProducer::SmearedMETProducer(const edm::ParameterSet& cfg)
-  : extraShift_(0),
-    extraSmearing_(0)
 {
   src_ = cfg.getParameter<edm::InputTag>("src");
 
@@ -24,23 +22,12 @@ SmearedMETProducer::SmearedMETProducer(const edm::ParameterSet& cfg)
     smearedParticleCollections_.push_back(smearedParticleType(cfgSmearedParticleCollection));
   }
 
-  if ( cfg.exists("extraShift") ) {
-    edm::ParameterSet cfgExtraShift = cfg.getParameter<edm::ParameterSet>("extraShift");
-    extraShift_ = new extraCorrType(cfgExtraShift);
-  }
-
-  if ( cfg.exists("extraSmearing") ) {
-    edm::ParameterSet cfgExtraSmearing = cfg.getParameter<edm::ParameterSet>("extraSmearing");
-    extraSmearing_ = new extraCorrType(cfgExtraSmearing);
-  }
-
   produces<pat::METCollection>();
 }
 
 SmearedMETProducer::~SmearedMETProducer()
 {
-  delete extraShift_;
-  delete extraSmearing_;
+// nothing to be done yet...
 }
     
 reco::Particle::LorentzVector compSumP4(const recoCandidateView& particles)
@@ -94,44 +81,10 @@ void SmearedMETProducer::produce(edm::Event& evt, const edm::EventSetup& es)
 
   for ( pat::METCollection::const_iterator originalMET = originalMETs->begin();
 	originalMET != originalMETs->end(); ++originalMET ) {
-    
-    reco::Particle::LorentzVector extraMEtCorrection;
-
-    if ( extraShift_ ) {
-      edm::Handle<recoCandidateView> particlesForDirection;
-      evt.getByLabel(extraShift_->srcDirection_, particlesForDirection);
-
-      if ( particlesForDirection->size() > 0 ) {
-	double extraShiftParallelParameterValue = (*extraShift_->objValExtractorParallel_)(evt);
-	double extraShiftParallel = extraShift_->extraCorrParallel_->Eval(extraShiftParallelParameterValue);
-
-        // CV: shift in perpendicular direction does not make sense
-        
-	updateMETcorrection(extraMEtCorrection, particlesForDirection->begin()->p4(), extraShiftParallel, 0.);
-      }
-    }
-    
-    if ( extraSmearing_ ) {
-      edm::Handle<recoCandidateView> particlesForDirection;
-      evt.getByLabel(extraSmearing_->srcDirection_, particlesForDirection);
-
-      if ( particlesForDirection->size() > 0 ) {
-	double extraSmearingParallelParameterValue = (*extraShift_->objValExtractorParallel_)(evt);
-	double extraSmearingParallel_rms = extraSmearing_->extraCorrParallel_->Eval(extraSmearingParallelParameterValue);
-	double extraSmearingParallel = rnd_.Gaus(0., extraSmearingParallel_rms);
-
-	double extraSmearingPerpendicularParameterValue = (*extraShift_->objValExtractorPerpendicular_)(evt);
-	double extraSmearingPerpendicular_rms = extraSmearing_->extraCorrParallel_->Eval(extraSmearingPerpendicularParameterValue);
-	double extraSmearingPerpendicular = rnd_.Gaus(0., extraSmearingPerpendicular_rms);
-
-	updateMETcorrection(extraMEtCorrection, particlesForDirection->begin()->p4(), extraSmearingParallel, extraSmearingPerpendicular);
-      }
-    }
-    
     pat::MET smearedMET(*originalMET);
 
-    double smearedMETpx = originalMET->px() + metCorrection.px() + extraMEtCorrection.px();
-    double smearedMETpy = originalMET->py() + metCorrection.py() + extraMEtCorrection.py();
+    double smearedMETpx = originalMET->px() + metCorrection.px();
+    double smearedMETpy = originalMET->py() + metCorrection.py();
     double smearedMETpt = TMath::Sqrt(smearedMETpx*smearedMETpx + smearedMETpy*smearedMETpy);
 
     smearedMET.setP4(math::XYZTLorentzVector(smearedMETpx, smearedMETpy, 0., smearedMETpt));
