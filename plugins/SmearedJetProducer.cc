@@ -10,7 +10,8 @@
 #include "DataFormats/Candidate/interface/Particle.h"
 
 SmearedJetProducer::SmearedJetProducer(const edm::ParameterSet& cfg)
-  : src_(cfg.getParameter<edm::InputTag>("src")),
+  : moduleLabel_(cfg.getParameter<std::string>("@module_label")),
+    src_(cfg.getParameter<edm::InputTag>("src")),
     jecUncertainty_(0),
     isJECuncertaintyFromFile_(false),
     shiftByJECuncertainty_(0.),
@@ -65,6 +66,7 @@ void SmearedJetProducer::produce(edm::Event& evt, const edm::EventSetup& es)
   for ( pat::JetCollection::const_iterator patJet = patJets->begin();
 	patJet != patJets->end(); ++patJet ) {
     pat::Jet smearedJet = (*patJet);
+
     if ( shiftByJECuncertainty_ != 0. ) {
       jecUncertainty_->setJetEta(patJet->eta());
       jecUncertainty_->setJetPt(patJet->pt());
