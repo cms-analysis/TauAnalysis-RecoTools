@@ -28,7 +28,9 @@ class SmearedTauProducer : public edm::EDProducer
  private:
   void produce(edm::Event&, const edm::EventSetup&);
 
-// ----------member data ---------------------------
+//---------------------- member data ---------------------------
+  std::string moduleLabel_;
+
   edm::InputTag src_; // input collection
 
   JetCorrectionUncertainty* jecUncertainty_;

@@ -12,7 +12,8 @@
 #include <TMath.h>
 
 SmearedTauProducer::SmearedTauProducer(const edm::ParameterSet& cfg)
-  : src_(cfg.getParameter<edm::InputTag>("src")),
+  : moduleLabel_(cfg.getParameter<std::string>("@module_label")),
+    src_(cfg.getParameter<edm::InputTag>("src")),
     jecUncertainty_(0),
     isJECuncertaintyFromFile_(false),
     shiftByJECuncertainty_(0.),
@@ -53,6 +54,10 @@ SmearedTauProducer::~SmearedTauProducer()
 
 void SmearedTauProducer::produce(edm::Event& evt, const edm::EventSetup& es) 
 {
+  //std::cout << "<SmearedTauProducer::produce>:" << std::endl;
+  //std::cout << " moduleLabel = " << moduleLabel_ << std::endl;
+  //std::cout << " shiftByJECuncertainty = " << shiftByJECuncertainty_ << std::endl;
+
   std::auto_ptr<pat::TauCollection> smearedTaus(new pat::TauCollection);
   
   edm::Handle<pat::TauCollection> patTaus;
@@ -74,18 +79,20 @@ void SmearedTauProducer::produce(edm::Event& evt, const edm::EventSetup& es)
       jecUncertainty_->setJetEta(patTau->eta());
       jecUncertainty_->setJetPt(patTau->pt());
 
-      double shift = shiftByJECuncertainty_*jecUncertainty_->getUncertainty(true);
+      double jecUncertainty = jecUncertainty_->getUncertainty(true);
+      //std::cout << " jecUncertainty = " << jecUncertainty << std::endl;
 
-//--- add flaor uncertainty
+//--- add flavor uncertainty
 //   (to account for difference in uncertainty on jet response
 //    between tau-jets and quark/gluon jets)
-      shift = TMath::Sqrt(shift*shift + jecFlavorUncertainty_*jecFlavorUncertainty_);
-      
+      double shift = shiftByJECuncertainty_*TMath::Sqrt(jecUncertainty*jecUncertainty + jecFlavorUncertainty_*jecFlavorUncertainty_);
+      //std::cout << " shift = " << shift << std::endl;
+
       reco::Particle::LorentzVector patTauP4 = patTau->p4();
       smearedTau.setP4((1. + shift)*patTauP4);
 
       //std::cout << "patTau: Pt = " << patTau->pt() << "," 
-      //	  << " eta = " << patTau->eta() << ", phi = " << patTau->phi() << std::endl;
+      //   	  << " eta = " << patTau->eta() << ", phi = " << patTau->phi() << std::endl;
       //std::cout << "smearedTau: Pt = " << smearedTau.pt() << "," 
       //	  << " eta = " << smearedTau.eta() << ", phi = " << smearedTau.phi() << std::endl;
     }
