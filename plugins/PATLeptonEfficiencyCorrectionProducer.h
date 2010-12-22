@@ -13,9 +13,9 @@
  *
  * \authors Christian Veelken
  *
- * \version $Revision: 1.2 $
+ * \version $Revision: 1.1 $
  *
- * $Id: PATLeptonEfficiencyCorrectionProducer.h,v 1.2 2010/09/28 11:23:36 jkolb Exp $
+ * $Id: PATLeptonEfficiencyCorrectionProducer.h,v 1.1 2010/11/22 16:17:36 veelken Exp $
  *
  */
 
@@ -48,7 +48,8 @@ class PATLeptonEfficiencyCorrectionProducer : public edm::EDProducer
  public:
 
   explicit PATLeptonEfficiencyCorrectionProducer(const edm::ParameterSet& cfg)
-    : inputFile_(0),
+    : moduleLabel_(cfg.getParameter<std::string>("@module_label")),
+      inputFile_(0),
       lut_(0),
       stringFunctionX_(0),
       stringFunctionY_(0),
@@ -128,6 +129,7 @@ class PATLeptonEfficiencyCorrectionProducer : public edm::EDProducer
   void produce(edm::Event& evt, const edm::EventSetup& es)
   {
     //std::cout << "<PATLeptonEfficiencyCorrectionProducer::produce>:" << std::endl;
+    //std::cout << " moduleLabel = " << moduleLabel_ << std::endl;
 
     double weight = 0.;
 
@@ -155,6 +157,8 @@ class PATLeptonEfficiencyCorrectionProducer : public edm::EDProducer
   }
 
  private:
+
+  std::string moduleLabel_;
 
   TFile* inputFile_;
   TH1* lut_;
