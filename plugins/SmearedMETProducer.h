@@ -10,9 +10,9 @@
  *         Manuel Zeise, Karlsruhe University & KIT;
  *         Michail Bachtis, University of Wisconsin
  *
- * \version $Revision: 1.2 $
+ * \version $Revision: 1.3 $
  *
- * $Id: SmearedMETProducer.h,v 1.2 2010/11/08 09:23:06 veelken Exp $
+ * $Id: SmearedMETProducer.h,v 1.3 2010/12/12 08:52:26 veelken Exp $
  *
  */
 
@@ -24,6 +24,8 @@
 
 #include "TauAnalysis/BgEstimationTools/interface/ObjValExtractorBase.h"
 
+#include <TRandom3.h>
+
 class SmearedMETProducer : public edm::EDProducer 
 {
  public:
@@ -32,6 +34,8 @@ class SmearedMETProducer : public edm::EDProducer
     
  private:
   virtual void produce(edm::Event&, const edm::EventSetup&); 
+
+  std::string moduleLabel_;
       
 //--- configuration parameters
 
@@ -43,15 +47,21 @@ class SmearedMETProducer : public edm::EDProducer
     smearedParticleType(const edm::ParameterSet& cfg)
       : srcOriginal_(cfg.getParameter<edm::InputTag>("srcOriginal")),
 	srcSmeared_(cfg.getParameter<edm::InputTag>("srcSmeared"))
-    {}
+    {
+      smearByResolutionUncertainty_ = cfg.exists("smearByResolutionUncertainty") ? 
+	cfg.getParameter<double>("smearByResolutionUncertainty") : 0.;
+    }
     ~smearedParticleType() {}
     edm::InputTag srcOriginal_;
     edm::InputTag srcSmeared_;
+    double smearByResolutionUncertainty_;
   };
 
   // collections of smeared pat::Electrons, pat::Muons, pat::Taus and pat::Jets
   // the systematic shifts/smearing of which is to enter the MET recomputation
   std::vector<smearedParticleType> smearedParticleCollections_;
+
+  TRandom rnd_;
 };
 
 #endif

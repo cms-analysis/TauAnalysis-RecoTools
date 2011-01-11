@@ -13,6 +13,7 @@ SmearedJetProducer::SmearedJetProducer(const edm::ParameterSet& cfg)
   : moduleLabel_(cfg.getParameter<std::string>("@module_label")),
     src_(cfg.getParameter<edm::InputTag>("src")),
     jecUncertainty_(0),
+    jecUncertaintyValue_(-1.),
     isJECuncertaintyFromFile_(false),
     shiftByJECuncertainty_(0.),
     smearingModule_(0)
@@ -31,13 +32,17 @@ SmearedJetProducer::SmearedJetProducer(const edm::ParameterSet& cfg)
 
     shiftByJECuncertainty_ = cfg.getParameter<double>("shiftByJECuncertainty");
 
-    jetCorrPayloadName_ = cfg.getParameter<std::string>("jetCorrPayloadName");
-    jetCorrUncertaintyTag_ = cfg.getParameter<std::string>("jetCorrUncertaintyTag");
+    if ( cfg.exists("jecUncertaintyValue") ) {
+      jecUncertaintyValue_ = cfg.getParameter<double>("jecUncertaintyValue");
+    } else {
+      jetCorrPayloadName_ = cfg.getParameter<std::string>("jetCorrPayloadName");
+      jetCorrUncertaintyTag_ = cfg.getParameter<std::string>("jetCorrUncertaintyTag");
+    }
   }
 
-  if ( cfg.exists("fileName") ) {
-    smearingModule_ = new SmearedParticleMaker<pat::Jet, GenJetRetriever<pat::Jet> >(cfg);
-  }
+  //if ( cfg.exists("fileName") ) {
+  //  smearingModule_ = new SmearedParticleMaker<pat::Jet, GenJetRetriever<pat::Jet> >(cfg);
+  //}
 
   produces<pat::JetCollection>();
 }
@@ -50,12 +55,16 @@ SmearedJetProducer::~SmearedJetProducer()
 
 void SmearedJetProducer::produce(edm::Event& evt, const edm::EventSetup& es) 
 {
+  //std::cout << "<SmearedJetProducer::produce>:" << std::endl;
+  //std::cout << " moduleLabel = " << moduleLabel_ << std::endl;
+  //std::cout << " shiftByJECuncertainty = " << shiftByJECuncertainty_ << std::endl;
+
   std::auto_ptr<pat::JetCollection> smearedJets(new pat::JetCollection);
 
   edm::Handle<pat::JetCollection> patJets;
   evt.getByLabel(src_, patJets);
 
-  if ( shiftByJECuncertainty_ != 0. && !isJECuncertaintyFromFile_ ) {
+  if ( shiftByJECuncertainty_ != 0. && !(isJECuncertaintyFromFile_ || jecUncertaintyValue_ >= 0.) ) {
     edm::ESHandle<JetCorrectorParametersCollection> jetCorrParameterSet;
     es.get<JetCorrectionsRecord>().get(jetCorrPayloadName_, jetCorrParameterSet); 
     const JetCorrectorParameters& jetCorrParameters = (*jetCorrParameterSet)[jetCorrUncertaintyTag_];
@@ -68,14 +77,19 @@ void SmearedJetProducer::produce(edm::Event& evt, const edm::EventSetup& es)
     pat::Jet smearedJet = (*patJet);
 
     if ( shiftByJECuncertainty_ != 0. ) {
-      jecUncertainty_->setJetEta(patJet->eta());
-      jecUncertainty_->setJetPt(patJet->pt());
-
-      double shift = shiftByJECuncertainty_*jecUncertainty_->getUncertainty(true);
+      double shift = 0.;
+      if ( jecUncertaintyValue_ >= 0. ) {
+	shift = shiftByJECuncertainty_*jecUncertaintyValue_;
+      } else {
+	jecUncertainty_->setJetEta(patJet->eta());
+	jecUncertainty_->setJetPt(patJet->pt());
+	
+	shift = shiftByJECuncertainty_*jecUncertainty_->getUncertainty(true);
+      }
 
       reco::Particle::LorentzVector patJetP4 = patJet->p4();
       smearedJet.setP4((1. + shift)*patJetP4);
-
+      
       //std::cout << "patJet: Pt = " << patJet->pt() << "," 
       //	  << " eta = " << patJet->eta() << ", phi = " << patJet->phi() << std::endl;
       //std::cout << "smearedJet: Pt = " << smearedJet.pt() << "," 

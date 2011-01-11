@@ -35,6 +35,8 @@ class SmearedJetProducer : public edm::EDProducer
 
   JetCorrectionUncertainty* jecUncertainty_;
 
+  double jecUncertaintyValue_;
+
   bool isJECuncertaintyFromFile_;
 
   double shiftByJECuncertainty_;

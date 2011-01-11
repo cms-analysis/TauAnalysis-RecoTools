@@ -39,9 +39,9 @@ SmearedTauProducer::SmearedTauProducer(const edm::ParameterSet& cfg)
     jecFlavorUncertainty_ = cfg.getParameter<double>("jecFlavorUncertainty");
   }
 
-  if ( cfg.exists("fileName") ) {
-    smearingModule_ = new SmearedParticleMaker<pat::Tau, GenJetRetriever<pat::Tau> >(cfg);
-  }
+  //if ( cfg.exists("fileName") ) {
+  //  smearingModule_ = new SmearedParticleMaker<pat::Tau, GenJetRetriever<pat::Tau> >(cfg);
+  //}
 
   produces<pat::TauCollection>();
 }
@@ -92,7 +92,7 @@ void SmearedTauProducer::produce(edm::Event& evt, const edm::EventSetup& es)
       smearedTau.setP4((1. + shift)*patTauP4);
 
       //std::cout << "patTau: Pt = " << patTau->pt() << "," 
-      //   	  << " eta = " << patTau->eta() << ", phi = " << patTau->phi() << std::endl;
+      //          << " eta = " << patTau->eta() << ", phi = " << patTau->phi() << std::endl;
       //std::cout << "smearedTau: Pt = " << smearedTau.pt() << "," 
       //	  << " eta = " << smearedTau.eta() << ", phi = " << smearedTau.phi() << std::endl;
     }
