@@ -3,9 +3,16 @@
 #include "DataFormats/Candidate/interface/Particle.h"
 #include "DataFormats/Common/interface/RefToPtr.h"
 
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
+#include "DataFormats/METReco/interface/GenMET.h"
+#include "DataFormats/METReco/interface/GenMETCollection.h"
+
 #include "TauAnalysis/CandidateTools/interface/candidateAuxFunctions.h"
 
 #include <TMath.h>
+
+#include <string>
 
 const std::string instNameMEtObjects = "met";
 const std::string instNameDiTauToMEtAssociations = "diTauToMEtAssociations";
@@ -15,7 +22,8 @@ const double sigmaU2min = 5.0;
 
 template <typename T1, typename T2>
 ZllT1T2RecoilCorrection<T1,T2>::ZllT1T2RecoilCorrection(const edm::ParameterSet& cfg)
-  : corrParameterData_(0),
+  : moduleLabel_(cfg.getParameter<std::string>("@module_label")),
+    corrParameterData_(0),
     corrParameterMC_(0),
     corrUncertaintyData_(0),
     corrUncertaintyMC_(0),
@@ -27,6 +35,8 @@ ZllT1T2RecoilCorrection<T1,T2>::ZllT1T2RecoilCorrection(const edm::ParameterSet&
     srcGenParticles_ = cfg.getParameter<edm::InputTag>("srcGenParticles");
     genParticlePdgIds_ = cfg.getParameter<vint>("genParticlePdgIds");
   }
+
+  if ( cfg.exists("srcGenMET") ) srcGenMET_ = cfg.getParameter<edm::InputTag>("srcGenMET");
 
   edm::ParameterSet cfgCorrParameter = cfg.getParameter<edm::ParameterSet>("parameter"); 
   corrParameterData_ = new corrParameterType(cfgCorrParameter.getParameter<edm::ParameterSet>("data"));
@@ -90,6 +100,7 @@ reco::Candidate::LorentzVector getP4GenBoson(const reco::GenParticleCollection& 
     for ( reco::GenParticleCollection::const_iterator genParticle = genParticles.begin();
 	  genParticle != genParticles.end(); ++genParticle ) {
       if ( TMath::Abs(genParticle->pdgId()) == TMath::Abs(*genParticlePdgId) ) {
+	//std::cout << "--> found genBoson: pdgId = " << genParticle->pdgId() << ", pt = " << genParticle->pt() << std::endl;
 	p4GenBoson_initialized = true;
 	return getGenP4AfterRadiation(*genParticle);
       }
@@ -109,6 +120,7 @@ template <typename T1, typename T2>
 void ZllT1T2RecoilCorrection<T1,T2>::produce(edm::Event& evt, const edm::EventSetup& es)
 {
   //std::cout << "<ZllT1T2RecoilCorrection::produce>:" << std::endl;
+  //std::cout << " moduleLabel = " << moduleLabel_ << std::endl;
 
   std::auto_ptr<pat::METCollection> correctedMETs(new pat::METCollection);
 
@@ -129,21 +141,34 @@ void ZllT1T2RecoilCorrection<T1,T2>::produce(edm::Event& evt, const edm::EventSe
     p4GenBoson = getP4GenBoson(*genParticles, genParticlePdgIds_, p4GenBoson_initialized);
   }
 
+  reco::Candidate::LorentzVector p4GenMET;
+  edm::Handle<reco::GenMETCollection> genMETs;
+  if ( srcGenMET_.label() != "" ) {
+    evt.getByLabel(srcGenMET_, genMETs);
+    if ( genMETs->size() == 1 ) {
+      p4GenMET = genMETs->at(0).p4();
+    } else {
+      edm::LogError ("produce") 
+	<< " Found " << genMETs->size() << " genMET objects in collection = " << srcGenMET_ << ","
+	<< " --> genMET momentum will NOT be initialized !!";
+    }
+  }
+
   size_t numDiTauCandidates = diTauCollection->size();
   for ( size_t iDiTauCandidate = 0; iDiTauCandidate < numDiTauCandidates; ++iDiTauCandidate ) {
     const CompositePtrCandidate& diTauCandidate = diTauCollection->at(iDiTauCandidate);
 
-    //std::cout << "diTauCandidate:" << std::endl;
+    //std::cout << "diTauCandidate **before** Z-recoil correction:" << std::endl;
     //std::cout << " leg1: pt = " << diTauCandidate.p4Leg1gen().pt() << "," 
     //	        << " eta = " << diTauCandidate.p4Leg1gen().eta() << ", phi = " << diTauCandidate.p4Leg1gen().phi() << std::endl;
     //std::cout << " leg2: pt = " << diTauCandidate.p4Leg2gen().pt() << "," 
     //	        << " eta = " << diTauCandidate.p4Leg2gen().eta() << ", phi = " << diTauCandidate.p4Leg2gen().phi() << std::endl;
-    //std::cout << "mass(SVfit) **before** Z-recoil correction = " 
-    //	        << diTauCandidate.svFitSolution("psKine_MEt_ptBalance")->mass() << std::endl;
+    //std::cout << " MET: px = " << diTauCandidate.met()->px() << ", py = " << diTauCandidate.met()->py() << std::endl;
+    //std::cout << "mass(SVfit) = " << diTauCandidate.svFitSolution("psKine_MEt_ptBalance")->mass() << std::endl;
 
     pat::MET correctedMEt(*diTauCandidate.met());
 
-    //std::cout << " MEt: px = " << diTauCandidate.met()->px() << ", py = " << diTauCandidate.met()->py() << std::endl;
+    //std::cout << " MEt: px = " << correctedMEt.px() << ", py = " << correctedMEt.py() << std::endl;
 
     reco::Candidate::LorentzVector q = ( p4GenBoson_initialized ) ? p4GenBoson : diTauCandidate.p4gen();
 
@@ -156,12 +181,11 @@ void ZllT1T2RecoilCorrection<T1,T2>::produce(edm::Event& evt, const edm::EventSe
     if ( qT > 0. ) {
 
       int errorFlag = 0;
-      std::pair<double, double> uTrec = compMEtProjU(diTauCandidate.p4gen(), 
+      std::pair<double, double> uTrec = compMEtProjU(p4GenBoson,
 						     diTauCandidate.met()->px(), diTauCandidate.met()->py(), errorFlag);
-      std::pair<double, double> uTgen = compMEtProjU(diTauCandidate.p4gen(), 
-						     0., 0., errorFlag); // MEt resolution parameters determined 
-                                                                         // from Z --> mu+ mu- events;
-                                                                         // assume "true" MEt to be zero in **those** events
+      std::pair<double, double> uTgen = compMEtProjU(p4GenBoson,
+						     p4GenMET.px(), p4GenMET.py(), errorFlag); 
+
       double u1rec = uTrec.first;
       double u1gen = uTgen.first;
       double u2rec = uTrec.second;
@@ -223,8 +247,14 @@ void ZllT1T2RecoilCorrection<T1,T2>::produce(edm::Event& evt, const edm::EventSe
       double uXrec_corrected = (u1rec_corrected*qX + u2rec_corrected*qY)/qT;
       double uYrec_corrected = (u1rec_corrected*qY - u2rec_corrected*qX)/qT;
 
-      double correctedMETpx = -(uXrec_corrected + qX);
-      double correctedMETpy = -(uYrec_corrected + qY);
+      double uXrec = (u1rec*qX + u2rec*qY)/qT;
+      double uYrec = (u1rec*qY - u2rec*qX)/qT;
+
+      //std::cout << " uXrec = " << uXrec << ", corrected = " << uXrec_corrected << std::endl;
+      //std::cout << " uYrec = " << uYrec << ", corrected = " << uYrec_corrected << std::endl;
+
+      double correctedMETpx = correctedMEt.px() - (uXrec_corrected - uXrec);
+      double correctedMETpy = correctedMEt.py() - (uYrec_corrected - uYrec);
       double correctedMETpt = TMath::Sqrt(correctedMETpx*correctedMETpx + correctedMETpy*correctedMETpy);
 
       //std::cout << "--> corrected MEt: px = " << correctedMETpx << ", py = " << correctedMETpy << std::endl;
