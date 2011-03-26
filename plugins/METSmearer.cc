@@ -13,7 +13,7 @@
 //
 // Original Author:  Manuel Zeise
 //         Created:  Mo Nov 16 10:12:40 CET 2009
-// $Id: METSmearer.cc,v 1.1 2010/01/12 07:19:24 zeise Exp $
+// $Id: METSmearer.cc,v 1.2 2010/05/21 07:49:22 veelken Exp $
 //
 //
 
@@ -523,7 +523,7 @@ void METSmearer<TauClass, JetClass, TowerClass, TauDiscriminatorClass, METClass>
 #include "FWCore/Framework/interface/MakerMacros.h"
 
 typedef METSmearer<reco::CaloTau, reco::CaloJet, CaloTower, reco::CaloTauDiscriminator, reco::CaloMET> TauAnalysisRecoToolsCaloMETSmearer;
-typedef METSmearer<PFTau, PFJet, CaloTower, reco::PFTauDiscriminator, reco::PFMET> TauAnalysisRecoToolsPFMETSmearer;
+typedef METSmearer<reco::PFTau, reco::PFJet, CaloTower, reco::PFTauDiscriminator, reco::PFMET> TauAnalysisRecoToolsPFMETSmearer;
 typedef METSmearer<reco::PFTau, reco::CaloJet, CaloTower, reco::PFTauDiscriminator, reco::CaloMET> TauAnalysisRecoToolsPFTauCaloMETSmearer;
 
 DEFINE_FWK_MODULE(TauAnalysisRecoToolsCaloMETSmearer);
