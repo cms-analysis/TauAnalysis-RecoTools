@@ -93,7 +93,11 @@ electronIsoDeposits = cms.Sequence( eleIsoDepositTk
 # names and settings taken from 22X, to be tuned
 #--------------------------------------------------------------------------------
 
-from CommonTools.ParticleFlow.Isolation.pfElectronIsolation_cff import *
+# for CMSSW_4_2_0_pre8 and higher
+#from CommonTools.ParticleFlow.Isolation.pfElectronIsolation_cff import *
+# for CMSSW_3_8_x and CMSSW_4_1_x release series
+from PhysicsTools.PFCandProducer.Isolation.pfElectronIsolation_cff import *
+
 elctronCollection = "gsfElectrons"
 pfeleIsoDepositPFCandidates   = isoDepositReplace(elctronCollection,"particleFlow")
 pfeleIsoChDepositPFCandidates = isoDepositReplace(elctronCollection,"pfAllChargedHadrons")
