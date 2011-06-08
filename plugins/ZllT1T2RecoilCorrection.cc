@@ -164,7 +164,7 @@ void ZllT1T2RecoilCorrection<T1,T2>::produce(edm::Event& evt, const edm::EventSe
     //std::cout << " leg2: pt = " << diTauCandidate.p4Leg2gen().pt() << "," 
     //	        << " eta = " << diTauCandidate.p4Leg2gen().eta() << ", phi = " << diTauCandidate.p4Leg2gen().phi() << std::endl;
     //std::cout << " MET: px = " << diTauCandidate.met()->px() << ", py = " << diTauCandidate.met()->py() << std::endl;
-    //std::cout << "mass(SVfit) = " << diTauCandidate.svFitSolution("psKine_MEt_ptBalance")->mass() << std::endl;
+    //std::cout << "mass(SVfit) = " << diTauCandidate.nSVfitSolution('psKine_MEt_logM_fit')->resonance(0)->mass() << std::endl;
 
     pat::MET correctedMEt(*diTauCandidate.met());
 
