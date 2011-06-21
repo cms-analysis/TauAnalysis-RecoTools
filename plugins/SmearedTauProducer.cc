@@ -91,6 +91,8 @@ void SmearedTauProducer::produce(edm::Event& evt, const edm::EventSetup& es)
       reco::Particle::LorentzVector patTauP4 = patTau->p4();
       smearedTau.setP4((1. + shift)*patTauP4);
 
+      smearedTau.addUserFloat("shiftByJECuncertainty", shift);
+
       //std::cout << "patTau: Pt = " << patTau->pt() << "," 
       //          << " eta = " << patTau->eta() << ", phi = " << patTau->phi() << std::endl;
       //std::cout << "smearedTau: Pt = " << smearedTau.pt() << "," 
