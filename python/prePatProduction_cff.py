@@ -6,16 +6,15 @@ import FWCore.ParameterSet.Config as cms
 
 # produce particle flow based muon isolation quantities
 # for CMSSW_4_2_0_pre8 and higher
-#from CommonTools.ParticleFlow.pfNoPileUp_cff import *
-#from CommonTools.ParticleFlow.ParticleSelectors.pfAllChargedHadrons_cfi import *
-#from CommonTools.ParticleFlow.ParticleSelectors.pfAllNeutralHadrons_cfi import *
-#from CommonTools.ParticleFlow.ParticleSelectors.pfAllPhotons_cfi import *
+from CommonTools.ParticleFlow.pfNoPileUp_cff import *
+from CommonTools.ParticleFlow.ParticleSelectors.pfAllChargedHadrons_cfi import *
+from CommonTools.ParticleFlow.ParticleSelectors.pfAllNeutralHadrons_cfi import *
+from CommonTools.ParticleFlow.ParticleSelectors.pfAllPhotons_cfi import *
 # for CMSSW_3_8_x and CMSSW_4_1_x release series
-from PhysicsTools.PFCandProducer.pfNoPileUp_cff import *
-from PhysicsTools.PFCandProducer.ParticleSelectors.pfAllChargedHadrons_cfi import *
-from PhysicsTools.PFCandProducer.ParticleSelectors.pfAllNeutralHadrons_cfi import *
-from PhysicsTools.PFCandProducer.ParticleSelectors.pfAllPhotons_cfi import *
-
+#from PhysicsTools.PFCandProducer.pfNoPileUp_cff import *
+#from PhysicsTools.PFCandProducer.ParticleSelectors.pfAllChargedHadrons_cfi import *
+#from PhysicsTools.PFCandProducer.ParticleSelectors.pfAllNeutralHadrons_cfi import *
+#from PhysicsTools.PFCandProducer.ParticleSelectors.pfAllPhotons_cfi import *
 from TauAnalysis.RecoTools.recoElectronIsolation_cfi import *
 from TauAnalysis.RecoTools.recoMuonIsolation_cfi import *
 
@@ -32,9 +31,6 @@ kt6PFJets.doRhoFastjet = True
 # and dR = 5.0/Et shrinking signal cone taus using latest tags;
 # produce tau id. discriminators (including TaNC = "Tau Neural Classifiers")
 from RecoTauTag.Configuration.RecoPFTauTag_cff import *
-
-# produce tau id. efficiencies & fake-rates
-from RecoTauTag.TauAnalysisTools.PFTauEfficiencyAssociator_cfi import *
 
 # produce anti-kt collections of generator level jets
 from RecoJets.Configuration.GenJetParticles_cff import *
@@ -60,7 +56,6 @@ producePrePat = cms.Sequence(
    #+ recoTauHPSTancSequence
    #+ hpsTancTausDiscriminationAgainstCaloMuon
    #+ shrinkingConePFTauTancCVTransform
-   #+ associateTauFakeRates    
    + ewkTauId
    + genParticlesForJets + ak5GenJets 
    + metsignificance
