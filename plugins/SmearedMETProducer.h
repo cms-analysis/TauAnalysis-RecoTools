@@ -10,9 +10,9 @@
  *         Manuel Zeise, Karlsruhe University & KIT;
  *         Michail Bachtis, University of Wisconsin
  *
- * \version $Revision: 1.3 $
+ * \version $Revision: 1.4 $
  *
- * $Id: SmearedMETProducer.h,v 1.3 2010/12/12 08:52:26 veelken Exp $
+ * $Id: SmearedMETProducer.h,v 1.4 2011/01/11 09:16:04 veelken Exp $
  *
  */
 
@@ -60,6 +60,8 @@ class SmearedMETProducer : public edm::EDProducer
   // collections of smeared pat::Electrons, pat::Muons, pat::Taus and pat::Jets
   // the systematic shifts/smearing of which is to enter the MET recomputation
   std::vector<smearedParticleType> smearedParticleCollections_;
+
+  double addPUsmearing_;
 
   TRandom rnd_;
 };

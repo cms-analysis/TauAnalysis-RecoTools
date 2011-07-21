@@ -23,6 +23,12 @@ SmearedMETProducer::SmearedMETProducer(const edm::ParameterSet& cfg)
     smearedParticleCollections_.push_back(smearedParticleType(cfgSmearedParticleCollection));
   }
 
+//--- additional smearing, uncorrelated with particles reconstructed in the event
+//   (pure random smearing, applied to x-direction and y-direction independently,
+//    with Gaussian resolution = 'addPUsmearing' configuration parameter)
+  addPUsmearing_ = ( cfg.exists("addPUsmearing") ) ?
+    cfg.getParameter<double>("addPUsmearing") : 0.;
+
   produces<pat::METCollection>();
 }
 
@@ -109,6 +115,13 @@ void SmearedMETProducer::produce(edm::Event& evt, const edm::EventSetup& es)
     }
   }
 
+  if ( addPUsmearing_ > 0. ) {
+    double pxPUsmearing = rnd_.Gaus(0., addPUsmearing_);
+    double pyPUsmearing = rnd_.Gaus(0., addPUsmearing_);
+    //std::cout << "adding PUsmearing: px = " << pxPUsmearing << ", py = " << pyPUsmearing << std::endl;
+    metCorrection += math::XYZTLorentzVector(pxPUsmearing, pyPUsmearing, 0., 0.);
+  }
+  
   std::auto_ptr<pat::METCollection> smearedMETs(new pat::METCollection);
 
   edm::Handle<pat::METCollection> originalMETs;
