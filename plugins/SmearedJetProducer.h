@@ -44,6 +44,8 @@ class SmearedJetProducer : public edm::EDProducer
   std::string jetCorrPayloadName_;
   std::string jetCorrUncertaintyTag_;
 
+  double varyByNsigmas_; // option to shift energy by N standard-deviations, useful for template morphing
+
   SmearedParticleMaker<pat::Jet, GenJetRetriever<pat::Jet> >* smearingModule_;
 };
 

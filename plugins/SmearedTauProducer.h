@@ -44,6 +44,8 @@ class SmearedTauProducer : public edm::EDProducer
 
   double jecFlavorUncertainty_;
 
+  double varyByNsigmas_; // option to shift energy by N standard-deviations, useful for template morphing
+
   SmearedParticleMaker<pat::Tau, GenJetRetriever<pat::Tau> >* smearingModule_;
 };
 

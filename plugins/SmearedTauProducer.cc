@@ -32,16 +32,14 @@ SmearedTauProducer::SmearedTauProducer(const edm::ParameterSet& cfg)
     }
 
     shiftByJECuncertainty_ = cfg.getParameter<double>("shiftByJECuncertainty");
+    varyByNsigmas_ = ( cfg.exists("varyByNsigmas") ) ?
+      cfg.getParameter<double>("varyByNsigmas") : 1.0;
 
     jetCorrPayloadName_ = cfg.getParameter<std::string>("jetCorrPayloadName");
     jetCorrUncertaintyTag_ = cfg.getParameter<std::string>("jetCorrUncertaintyTag");
 
     jecFlavorUncertainty_ = cfg.getParameter<double>("jecFlavorUncertainty");
   }
-
-  //if ( cfg.exists("fileName") ) {
-  //  smearingModule_ = new SmearedParticleMaker<pat::Tau, GenJetRetriever<pat::Tau> >(cfg);
-  //}
 
   produces<pat::TauCollection>();
 }
@@ -87,6 +85,8 @@ void SmearedTauProducer::produce(edm::Event& evt, const edm::EventSetup& es)
 //    between tau-jets and quark/gluon jets)
       double shift = shiftByJECuncertainty_*TMath::Sqrt(jecUncertainty*jecUncertainty + jecFlavorUncertainty_*jecFlavorUncertainty_);
       //std::cout << " shift = " << shift << std::endl;
+
+      shift *= varyByNsigmas_;
 
       reco::Particle::LorentzVector patTauP4 = patTau->p4();
       smearedTau.setP4((1. + shift)*patTauP4);

@@ -31,6 +31,8 @@ SmearedJetProducer::SmearedJetProducer(const edm::ParameterSet& cfg)
     }
 
     shiftByJECuncertainty_ = cfg.getParameter<double>("shiftByJECuncertainty");
+    varyByNsigmas_ = ( cfg.exists("varyByNsigmas") ) ?
+      cfg.getParameter<double>("varyByNsigmas") : 1.0;
 
     if ( cfg.exists("jecUncertaintyValue") ) {
       jecUncertaintyValue_ = cfg.getParameter<double>("jecUncertaintyValue");
@@ -39,10 +41,6 @@ SmearedJetProducer::SmearedJetProducer(const edm::ParameterSet& cfg)
       jetCorrUncertaintyTag_ = cfg.getParameter<std::string>("jetCorrUncertaintyTag");
     }
   }
-
-  //if ( cfg.exists("fileName") ) {
-  //  smearingModule_ = new SmearedParticleMaker<pat::Jet, GenJetRetriever<pat::Jet> >(cfg);
-  //}
 
   produces<pat::JetCollection>();
 }
@@ -86,6 +84,8 @@ void SmearedJetProducer::produce(edm::Event& evt, const edm::EventSetup& es)
 	
 	shift = shiftByJECuncertainty_*jecUncertainty_->getUncertainty(true);
       }
+
+      shift *= varyByNsigmas_;
 
       reco::Particle::LorentzVector patJetP4 = patJet->p4();
       smearedJet.setP4((1. + shift)*patJetP4);
