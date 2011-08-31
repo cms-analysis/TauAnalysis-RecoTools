@@ -1,7 +1,7 @@
-#ifndef TauAnalysis_RecoTools_PATLeptonEfficiencyCorrectionProducer_h
-#define TauAnalysis_RecoTools_PATLeptonEfficiencyCorrectionProducer_h
+#ifndef TauAnalysis_RecoTools_PATObjectEfficiencyCorrectionProducer_h
+#define TauAnalysis_RecoTools_PATObjectEfficiencyCorrectionProducer_h
 
-/** \class PATLeptonEfficiencyCorrectionProducer
+/** \class PATObjectEfficiencyCorrectionProducer
  *
  * Produce downgrade weights to correct for differences in lepton reconstruction, id., 
  * isolation and trigger efficiencies between data and Monte Carlo simulation
@@ -13,9 +13,9 @@
  *
  * \authors Christian Veelken
  *
- * \version $Revision: 1.1 $
+ * \version $Revision: 1.2 $
  *
- * $Id: PATLeptonEfficiencyCorrectionProducer.h,v 1.1 2010/11/22 16:17:36 veelken Exp $
+ * $Id: PATObjectEfficiencyCorrectionProducer.h,v 1.2 2010/12/22 10:03:05 veelken Exp $
  *
  */
 
@@ -41,13 +41,13 @@
 #include <string>
 
 template<typename T>
-class PATLeptonEfficiencyCorrectionProducer : public edm::EDProducer 
+class PATObjectEfficiencyCorrectionProducer : public edm::EDProducer 
 {
   typedef std::vector<edm::InputTag> vInputTag;
 
  public:
 
-  explicit PATLeptonEfficiencyCorrectionProducer(const edm::ParameterSet& cfg)
+  explicit PATObjectEfficiencyCorrectionProducer(const edm::ParameterSet& cfg)
     : moduleLabel_(cfg.getParameter<std::string>("@module_label")),
       inputFile_(0),
       lut_(0),
@@ -62,23 +62,23 @@ class PATLeptonEfficiencyCorrectionProducer : public edm::EDProducer
       inputFile_ = new TFile(inputFileName.fullPath().data());
       lut_ = (TH1*)inputFile_->Get(lutName.data());
     } else {
-      throw cms::Exception("PATLeptonEfficiencyCorrectionProducer") 
+      throw cms::Exception("PATObjectEfficiencyCorrectionProducer") 
 	<< " Failed to find file = " << inputFileName << " !!";
     }
 
     edm::ParameterSet cfgParametrization = cfg.getParameter<edm::ParameterSet>("parametrization");
-    srcLeptons_ = cfgParametrization.getParameter<vInputTag>("srcLeptons");
+    srcObjects_ = cfgParametrization.getParameter<vInputTag>("src");
 
     stringFunctionX_ = new StringObjectFunction<T>(cfgParametrization.getParameter<std::string>("x"));
     if ( lut_->GetDimension() >= 2 ) stringFunctionY_ = new StringObjectFunction<T>(cfgParametrization.getParameter<std::string>("y"));
     if ( lut_->GetDimension() >= 3 ) stringFunctionZ_ = new StringObjectFunction<T>(cfgParametrization.getParameter<std::string>("z"));
     
-    noLeptonSubstituteValue_ = cfg.getParameter<double>("noLeptonSubstituteValue");
+    noObjectSubstituteValue_ = cfg.getParameter<double>("noObjectSubstituteValue");
 
     produces<double>("");
   }
 
-  ~PATLeptonEfficiencyCorrectionProducer() 
+  ~PATObjectEfficiencyCorrectionProducer() 
   {
     delete inputFile_;
 
@@ -87,37 +87,37 @@ class PATLeptonEfficiencyCorrectionProducer : public edm::EDProducer
     delete stringFunctionZ_;
   }
 
-  int getBin(TAxis* axis, double leptonX)
+  int getBin(TAxis* axis, double objX)
   {
-    int bin = axis->FindFixBin(leptonX);
+    int bin = axis->FindFixBin(objX);
     int nBins = axis->GetNbins();
     if ( bin < 1     ) bin = 1;
     if ( bin > nBins ) bin = nBins;
     return bin;
   }
 
-  double getEfficiencyCorrection(const T& lepton)
+  double getEfficiencyCorrection(const T& obj)
   {
-    double leptonX, leptonY, leptonZ;
+    double objX, objY, objZ;
     int binX, binY, binZ;
     switch ( lut_->GetDimension() ) {
     case 1:
-      leptonX = (*stringFunctionX_)(lepton);
-      binX = getBin(lut_->GetXaxis(), leptonX);
+      objX = (*stringFunctionX_)(obj);
+      binX = getBin(lut_->GetXaxis(), objX);
       return lut_->GetBinContent(binX);
     case 2:
-      leptonX = (*stringFunctionX_)(lepton);
-      binX = getBin(lut_->GetXaxis(), leptonX);
-      leptonY = (*stringFunctionY_)(lepton);
-      binY = getBin(lut_->GetYaxis(), leptonY);
+      objX = (*stringFunctionX_)(obj);
+      binX = getBin(lut_->GetXaxis(), objX);
+      objY = (*stringFunctionY_)(obj);
+      binY = getBin(lut_->GetYaxis(), objY);
       return lut_->GetBinContent(binX, binY);
     case 3:
-      leptonX = (*stringFunctionX_)(lepton);
-      binX = getBin(lut_->GetXaxis(), leptonX);
-      leptonY = (*stringFunctionY_)(lepton);
-      binY = getBin(lut_->GetYaxis(), leptonY);
-      leptonZ = (*stringFunctionZ_)(lepton);
-      binZ = getBin(lut_->GetZaxis(), leptonZ);
+      objX = (*stringFunctionX_)(obj);
+      binX = getBin(lut_->GetXaxis(), objX);
+      objY = (*stringFunctionY_)(obj);
+      binY = getBin(lut_->GetYaxis(), objY);
+      objZ = (*stringFunctionZ_)(obj);
+      binZ = getBin(lut_->GetZaxis(), objZ);
       return lut_->GetBinContent(binX, binY, binZ);
     } 
 
@@ -128,28 +128,28 @@ class PATLeptonEfficiencyCorrectionProducer : public edm::EDProducer
 
   void produce(edm::Event& evt, const edm::EventSetup& es)
   {
-    //std::cout << "<PATLeptonEfficiencyCorrectionProducer::produce>:" << std::endl;
+    //std::cout << "<PATObjectEfficiencyCorrectionProducer::produce>:" << std::endl;
     //std::cout << " moduleLabel = " << moduleLabel_ << std::endl;
 
     double weight = 0.;
 
     typedef edm::View<T> TView;
 
-    bool foundLepton = false;
-    for ( vInputTag::const_iterator src = srcLeptons_.begin();
-	  src != srcLeptons_.end(); ++src ) {
-      edm::Handle<TView> leptonCollection;
-      pf::fetchCollection(leptonCollection, *src, evt);
+    bool foundObj = false;
+    for ( vInputTag::const_iterator src = srcObjects_.begin();
+	  src != srcObjects_.end(); ++src ) {
+      edm::Handle<TView> objCollection;
+      pf::fetchCollection(objCollection, *src, evt);
 
-      for ( typename TView::const_iterator lepton = leptonCollection->begin();
-	    lepton != leptonCollection->end(); ++lepton ) {
-	weight = getEfficiencyCorrection(*lepton);
-	foundLepton = true;
+      for ( typename TView::const_iterator obj = objCollection->begin();
+	    obj != objCollection->end(); ++obj ) {
+	weight = getEfficiencyCorrection(*obj);
+	foundObj = true;
 	break;
       }
     }
 
-    if ( !foundLepton ) weight = noLeptonSubstituteValue_;
+    if ( !foundObj ) weight = noObjectSubstituteValue_;
     //std::cout << "--> weight = " << weight << std::endl;
   
     std::auto_ptr<double> weightPtr(new double(weight));
@@ -163,13 +163,13 @@ class PATLeptonEfficiencyCorrectionProducer : public edm::EDProducer
   TFile* inputFile_;
   TH1* lut_;
 
-  vInputTag srcLeptons_;
+  vInputTag srcObjects_;
 
   StringObjectFunction<T>* stringFunctionX_;
   StringObjectFunction<T>* stringFunctionY_;
   StringObjectFunction<T>* stringFunctionZ_;
 
-  double noLeptonSubstituteValue_;
+  double noObjectSubstituteValue_;
 };
 
 #endif
