@@ -136,18 +136,19 @@ class SmearedJetProducerT : public edm::EDProducer
 	  jet != jets->end(); ++jet ) {
       reco::Candidate::LorentzVector jetP4 = jet->p4();
 
-      const reco::GenJet* genJet = genJetMatcher_(*jet, &evt);
-      if ( !genJet ) continue;
-    
-      int binIndex = lut_->FindBin(TMath::Abs(jetP4.eta()), jetP4.pt());
-      double smearFactor = lut_->GetBinContent(binIndex);
-      smearFactor = TMath::Power(smearFactor, varyByNsigmas_);
-
-      reco::Candidate::LorentzVector smearP4 = jet->p4() - genJet->p4();
-      smearP4 *= smearFactor;
-
       T smearedJet = (*jet);
-      smearedJet.setP4(genJet->p4() + smearP4);
+
+      const reco::GenJet* genJet = genJetMatcher_(*jet, &evt);
+      if ( genJet ) {
+	int binIndex = lut_->FindBin(TMath::Abs(jetP4.eta()), jetP4.pt());
+	double smearFactor = lut_->GetBinContent(binIndex);
+	smearFactor = TMath::Power(smearFactor, varyByNsigmas_);
+
+	reco::Candidate::LorentzVector smearP4 = jet->p4() - genJet->p4();
+	smearP4 *= smearFactor;
+	
+	smearedJet.setP4(genJet->p4() + smearP4);
+      }
 
       smearedJets->push_back(smearedJet);
     }
