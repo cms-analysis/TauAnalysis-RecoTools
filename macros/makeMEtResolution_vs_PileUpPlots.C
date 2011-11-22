@@ -34,7 +34,7 @@ TH1* getHistogram(TFile* inputFile, const TString& dqmDirectory, const TString& 
   return histogram;
 }
 
-TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile, 
+TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile, TF1* fit, 
 					  TObjArray& processes, 
 					  const TString& data_or_mcType, const TString& runPeriod, const TString& projection)
 {
@@ -50,8 +50,8 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile,
     for ( int iProcess = 0; iProcess < numProcesses; ++iProcess ) {
       TObjString* process = dynamic_cast<TObjString*>(processes.At(iProcess));
       
-      TString histogramName = Form("%sVsQtEq%i", projection.Data(), iVertex);
-      TH2* histogram_process = dynamic_cast<TH2*>(getHistogram(inputFile, process->GetString(), histogramName));
+      TString histogramName_process = Form("%sVsQtNumVerticesEq%i", projection.Data(), iVertex);
+      TH2* histogram_process = dynamic_cast<TH2*>(getHistogram(inputFile, process->GetString(), histogramName_process));
       
       if ( histogram_sum ) {
 	histogram_sum->Add(histogram_process);
@@ -60,7 +60,37 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile,
       }
     }
 
-    TH1* histogram_1d = histogram_sum->ProjectionY();
+    TH1* histogram_1d = 0;
+    if ( fit ) {
+      TString histogramName_1d = TString(histogram_sum->GetName()).Append("_1d");
+      histogram_1d = new TH1D(histogramName_1d.Data(), histogramName_1d.Data(), 75, -75., +75.);
+      if ( !histogram_1d->GetSumw2N() ) histogram_1d->Sumw2();
+
+      int numBinsX = histogram_sum->GetNbinsX();
+      for ( int iBinX = 1; iBinX <= numBinsX; ++iBinX ) {
+	double x = histogram_sum->GetXaxis()->GetBinCenter(iBinX);
+
+	int numBinsY = histogram_sum->GetNbinsY();
+	for ( int iBinY = 1; iBinY <= numBinsY; ++iBinY ) {
+	  double y = histogram_sum->GetYaxis()->GetBinCenter(iBinY);
+
+	  double diff_y = y - fit->Eval(x);
+
+	  int bin_1d = histogram_1d->FindBin(diff_y);
+
+	  double binContent_1d = histogram_1d->GetBinContent(bin_1d);
+	  double binError_1d = histogram_1d->GetBinError(bin_1d);
+
+	  double addBinContent = histogram_sum->GetBinContent(iBinX, iBinY);
+          double addBinError = histogram_sum->GetBinError(iBinX, iBinY);
+
+	  histogram_1d->SetBinContent(bin_1d, binContent_1d + addBinContent);
+	  histogram_1d->SetBinError(bin_1d, TMath::Sqrt(binError_1d*binError_1d + addBinError*addBinError));
+	}
+      }
+    } else {
+      histogram_1d = histogram_sum->ProjectionY();
+    }
 
     double x = iVertex;
     double y = histogram_1d->GetRMS();
@@ -68,6 +98,8 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile,
 
     graph->SetPoint(iVertex - 1, x, y);
     graph->SetPointError(iVertex - 1, 0., yErr);
+
+    delete histogram_1d;
   }
 
   TString graphName = Form("graph_%s_%s_%s", data_or_mcType.Data(), runPeriod.Data(), projection.Data());
@@ -76,14 +108,14 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile,
   return graph;
 }
 
-TGraphErrors* compMEtResolution_vs_PileUp_data(TFile* inputFile, const TString& runPeriod, const TString& projection)
+TGraphErrors* compMEtResolution_vs_PileUp_data(TFile* inputFile, TF1* fit, const TString& runPeriod, const TString& projection)
 {
   TObjArray processes;
   processes.Add(new TObjString("Data"));
-  return compMEtResolution_vs_PileUp(inputFile, processes, "data", runPeriod, projection);
+  return compMEtResolution_vs_PileUp(inputFile, fit, processes, "data", runPeriod, projection);
 }
 
-TGraphErrors* compMEtResolution_vs_PileUp_mc(TFile* inputFile, const TString& runPeriod, const TString& projection)
+TGraphErrors* compMEtResolution_vs_PileUp_mc(TFile* inputFile, TF1* fit, const TString& runPeriod, const TString& projection)
 {
   TObjArray processes;
   processes.Add(new TObjString("simDYtoMuMu"));
@@ -92,7 +124,7 @@ TGraphErrors* compMEtResolution_vs_PileUp_mc(TFile* inputFile, const TString& ru
   processes.Add(new TObjString("simWZ"));
   processes.Add(new TObjString("simZZ"));
   processes.Add(new TObjString("simQCD"));
-  return compMEtResolution_vs_PileUp(inputFile, processes, "mc", runPeriod, projection);
+  return compMEtResolution_vs_PileUp(inputFile, fit, processes, "mc", runPeriod, projection);
 }
 
 TF1* fitMEtResolution_vs_PileUp(TGraph* graph)
@@ -102,6 +134,7 @@ TF1* fitMEtResolution_vs_PileUp(TGraph* graph)
   TF1* fit = new TF1(fitName.Data(), "TMath::Sqrt([0]*[0] + TMath::Power(x, [1])*[2]*[2])", 0.5, 24.5);
   fit->SetParameter(0, 8.);
   fit->SetParameter(1, 1.);
+  //fit->FixParameter(1, 1.);
   fit->SetParameter(2, 4.);
   graph->Fit(fit, "0");
   return fit;
@@ -110,21 +143,23 @@ TF1* fitMEtResolution_vs_PileUp(TGraph* graph)
 void makeMEtResolution_vs_PileUpPlot(const TString& metType, 
 				     const TString& projection, const TString& yAxisTitle,
 				     TFile* inputFile_2011runA, 
-				     TFile* inputFile_2011runB)
+				     TF1* fit_2011runA_data, TF1* fit_2011runA_mc,
+				     TFile* inputFile_2011runB,
+				     TF1* fit_2011runB_data, TF1* fit_2011runB_mc)
 {
-  TGraphErrors* graph_data_2011runA = compMEtResolution_vs_PileUp_data(inputFile_2011runA, "2011runA", projection);
+  TGraphErrors* graph_data_2011runA = compMEtResolution_vs_PileUp_data(inputFile_2011runA, fit_2011runA_data, "2011runA", projection);
   TF1* fit_data_2011runA = fitMEtResolution_vs_PileUp(graph_data_2011runA);
   
-  TGraphErrors* graph_mc_2011runA = compMEtResolution_vs_PileUp_mc(inputFile_2011runA, "2011runA", projection);
+  TGraphErrors* graph_mc_2011runA = compMEtResolution_vs_PileUp_mc(inputFile_2011runA, fit_2011runA_mc, "2011runA", projection);
   TF1* fit_mc_2011runA = fitMEtResolution_vs_PileUp(graph_mc_2011runA);
   
-  TGraphErrors* graph_data_2011runB = compMEtResolution_vs_PileUp_data(inputFile_2011runB, "2011runB", projection);
+  TGraphErrors* graph_data_2011runB = compMEtResolution_vs_PileUp_data(inputFile_2011runB, fit_2011runB_data, "2011runB", projection);
   TF1* fit_data_2011runB = fitMEtResolution_vs_PileUp(graph_data_2011runB);
   
-  TGraphErrors* graph_mc_2011runB = compMEtResolution_vs_PileUp_mc(inputFile_2011runB, "2011runB", projection);
+  TGraphErrors* graph_mc_2011runB = compMEtResolution_vs_PileUp_mc(inputFile_2011runB, fit_2011runB_mc, "2011runB", projection);
   TF1* fit_mc_2011runB = fitMEtResolution_vs_PileUp(graph_mc_2011runB);
 
-  TCanvas* canvas = new TCanvas("canvas", "canvas", 800, 900);
+  TCanvas* canvas = new TCanvas("canvas", "canvas", 800, 720);
   canvas->SetFillColor(10);
   canvas->SetBorderSize(2);
   canvas->SetLeftMargin(0.12);
@@ -184,7 +219,7 @@ void makeMEtResolution_vs_PileUpPlot(const TString& metType,
   fit_mc_2011runB->SetLineWidth(2);
   fit_mc_2011runB->Draw("same");
 
-  TLegend* legend = new TLegend(0.16, 0.71, 0.42, 0.89, "", "brNDC"); 
+  TLegend* legend = new TLegend(0.145, 0.665, 0.48, 0.87, "", "brNDC"); 
   legend->SetBorderSize(0);
   legend->SetFillColor(0);
   legend->AddEntry(graph_data_2011runA, "Run A Data", "p");
@@ -210,6 +245,13 @@ TString getFileName_full(const TString& path, const TString& fileName)
   return fileName_full;
 }
 
+void setFitParameter(TF1* fit, double r_had, double alpha, double beta)
+{
+  fit->SetParameter(0, r_had);
+  fit->SetParameter(1, alpha);
+  fit->SetParameter(2, beta);
+}
+
 void makeMEtResolution_vs_PileUpPlots()
 {
 //--- stop ROOT from keeping references to all histograms
@@ -218,12 +260,12 @@ void makeMEtResolution_vs_PileUpPlots()
 //--- suppress the output canvas 
   gROOT->SetBatch(true);
 
-  TString inputFilePath_2011runA = "/data1/veelken/tmp/ZllRecoilCorrection/v4_3_1/2011RunA/";
+  TString inputFilePath_2011runA = "/data1/veelken/tmp/ZllRecoilCorrection/v4_3_2/2011RunA/";
 
   TString inputFileName_pfMEt_2011runA = "analyzeZllRecoilCorrectionHistograms_all_pfMEtSmeared.root";
   TString inputFileName_pfMEtType1corrected_2011runA = "analyzeZllRecoilCorrectionHistograms_all_pfMEtTypeIcorrectedSmeared.root";
 
-  TString inputFilePath_2011runB = "/data1/veelken/tmp/ZllRecoilCorrection/v4_3/2011RunB/";
+  TString inputFilePath_2011runB = "/data1/veelken/tmp/ZllRecoilCorrection/v4_3_1/2011RunB/";
 
   TString inputFileName_pfMEt_2011runB = "analyzeZllRecoilCorrectionHistograms_all_pfMEtSmeared.root";
   TString inputFileName_pfMEtType1corrected_2011runB = "analyzeZllRecoilCorrectionHistograms_all_pfMEtTypeIcorrectedSmeared.root";
@@ -241,22 +283,70 @@ void makeMEtResolution_vs_PileUpPlots()
     new TFile(getFileName_full(inputFilePath_2011runB, 
 			       inputFileName_pfMEtType1corrected_2011runB));
   
+  TString fit_uParl_formula = "-[0]*x*0.5*(1.0 - TMath::Erf(-[1]*TMath::Power(x, [2])))";
+  double fit_uParl_xMin = 0.;
+  double fit_uParl_xMax = 500.;
+
+  TF1* fit_uParl_pfMEt_2011runA_data = 
+    new TF1("fit_uParl_pfMEt_2011runA_data", 
+	    fit_uParl_formula.Data(), fit_uParl_xMin, fit_uParl_xMax);
+  setFitParameter(fit_uParl_pfMEt_2011runA_data, 0.938, 0.160, 0.542);
+  TF1* fit_uParl_pfMEt_2011runA_mc = 
+    new TF1("fit_uParl_pfMEt_2011runA_data", 
+	    fit_uParl_formula.Data(), fit_uParl_xMin, fit_uParl_xMax);
+  setFitParameter(fit_uParl_pfMEt_2011runA_mc, 0.952, 0.166, 0.560);
+
+  TF1* fit_uParl_pfMEt_2011runB_data = 
+    new TF1("fit_uParl_pfMEt_2011runB_data", 
+	    fit_uParl_formula.Data(), fit_uParl_xMin, fit_uParl_xMax);
+  setFitParameter(fit_uParl_pfMEt_2011runB_data, 0.941, 0.165, 0.523);
+  TF1* fit_uParl_pfMEt_2011runB_mc = 
+    new TF1("fit_uParl_pfMEt_2011runB_data", 
+	    fit_uParl_formula.Data(), fit_uParl_xMin, fit_uParl_xMax);
+  setFitParameter(fit_uParl_pfMEt_2011runB_mc, 0.953, 0.155, 0.568);
+
+  TF1* fit_uParl_pfMEtType1corrected_2011runA_data = 
+    new TF1("fit_uParl_pfMEtType1corrected_2011runA_data", 
+	    fit_uParl_formula.Data(), fit_uParl_xMin, fit_uParl_xMax);
+  setFitParameter(fit_uParl_pfMEtType1corrected_2011runA_data, 1.010, 0.114, 0.688);
+  TF1* fit_uParl_pfMEtType1corrected_2011runA_mc = 
+    new TF1("fit_uParl_pfMEtType1corrected_2011runA_data", 
+	    fit_uParl_formula.Data(), fit_uParl_xMin, fit_uParl_xMax);
+  setFitParameter(fit_uParl_pfMEtType1corrected_2011runA_mc, 1.004, 0.123, 0.688);
+
+  TF1* fit_uParl_pfMEtType1corrected_2011runB_data = 
+    new TF1("fit_uParl_pfMEtType1corrected_2011runB_data", 
+	    fit_uParl_formula.Data(), fit_uParl_xMin, fit_uParl_xMax);
+  setFitParameter(fit_uParl_pfMEtType1corrected_2011runB_data, 1.010, 0.123, 0.664);
+  TF1* fit_uParl_pfMEtType1corrected_2011runB_mc = 
+    new TF1("fit_uParl_pfMEtType1corrected_2011runB_data", 
+	    fit_uParl_formula.Data(), fit_uParl_xMin, fit_uParl_xMax);
+  setFitParameter(fit_uParl_pfMEtType1corrected_2011runB_mc, 1.004, 0.125, 0.673);
+
   makeMEtResolution_vs_PileUpPlot("rawPFMEt", 
 				  "uParl", "rms(u_{#parallel} ) / GeV", 
-				  inputFile_pfMEt_2011runA,
-				  inputFile_pfMEt_2011runB);
+				  inputFile_pfMEt_2011runA, 
+				  fit_uParl_pfMEt_2011runA_data, fit_uParl_pfMEt_2011runA_mc,
+				  inputFile_pfMEt_2011runB, 
+				  fit_uParl_pfMEt_2011runB_data, fit_uParl_pfMEt_2011runB_mc);
   makeMEtResolution_vs_PileUpPlot("rawPFMEt", 
 				  "uPerp", "rms(u_{#perp}  ) / GeV", 
-				  inputFile_pfMEt_2011runA,
-				  inputFile_pfMEt_2011runB);
+				  inputFile_pfMEt_2011runA, 
+				  0, 0, 
+				  inputFile_pfMEt_2011runB, 
+				  0, 0);
   makeMEtResolution_vs_PileUpPlot("Type1correctedPFMEt", 
 				  "uParl", "rms(u_{#parallel} ) / GeV", 
-				  inputFile_pfMEtType1corrected_2011runA,
-				  inputFile_pfMEtType1corrected_2011runB);
+				  inputFile_pfMEtType1corrected_2011runA, 
+				  fit_uParl_pfMEtType1corrected_2011runA_data, fit_uParl_pfMEtType1corrected_2011runA_mc,
+				  inputFile_pfMEtType1corrected_2011runB, 
+				  fit_uParl_pfMEtType1corrected_2011runA_data, fit_uParl_pfMEtType1corrected_2011runA_mc);
   makeMEtResolution_vs_PileUpPlot("Type1correctedPFMEt", 
 				  "uPerp", "rms(u_{#perp}  ) / GeV", 
-				  inputFile_pfMEtType1corrected_2011runA,
-				  inputFile_pfMEtType1corrected_2011runB);
+				  inputFile_pfMEtType1corrected_2011runA, 
+				  0, 0,
+				  inputFile_pfMEtType1corrected_2011runB, 
+				  0, 0);
 
   delete inputFile_pfMEt_2011runA;
   delete inputFile_pfMEt_2011runB;
