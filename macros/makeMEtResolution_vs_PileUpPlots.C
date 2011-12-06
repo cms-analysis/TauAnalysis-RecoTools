@@ -12,8 +12,30 @@
 #include <TMath.h>
 #include <TROOT.h>
 
+#include <string>
+#include <map>
 #include <iostream>
 #include <iomanip>
+
+const double p0_data        =  1.4673;
+const double p0ErrUp_data   =  0.0532;
+const double p0ErrDown_data =  0.4673;
+const double p1_data        =  0.9235;
+const double p1ErrUp_data   =  0.0138;
+const double p1ErrDown_data =  0.0138;
+const double p2_data        = -0.0018;
+const double p2ErrUp_data   =  0.0043;
+const double p2ErrDown_data =  0.0018;
+
+const double p0_mc          =  1.0002;
+const double p0ErrUp_mc     =  0.0005;
+const double p0ErrDown_mc   =  0.0005;
+const double p1_mc          =  0.7067;
+const double p1ErrUp_mc     =  0.0008;
+const double p1ErrDown_mc   =  0.0008;
+const double p2_mc          = -0.0018;
+const double p2ErrUp_mc     =  0.0001;
+const double p2ErrDown_mc   =  0.0001;
 
 TH1* getHistogram(TFile* inputFile, const TString& dqmDirectory, const TString& meName)
 {  
@@ -35,7 +57,7 @@ TH1* getHistogram(TFile* inputFile, const TString& dqmDirectory, const TString& 
 }
 
 TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile, TF1* fit, 
-					  TObjArray& processes, 
+					  TObjArray& processes, const std::string& central_or_shift,
 					  const TString& data_or_mcType, const TString& runPeriod, const TString& projection,
 					  double p0, double p1, double p2)
 {
@@ -51,8 +73,10 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile, TF1* fit,
     for ( int iProcess = 0; iProcess < numProcesses; ++iProcess ) {
       TObjString* process = dynamic_cast<TObjString*>(processes.At(iProcess));
       
+      TString dqmDirectory = process->GetString();
+      if ( central_or_shift != "central" ) dqmDirectory.Append("/").Append(central_or_shift.data());
       TString histogramName_process = Form("%sVsQtNumVerticesEq%i", projection.Data(), iVertex);
-      TH2* histogram_process = dynamic_cast<TH2*>(getHistogram(inputFile, process->GetString(), histogramName_process));
+      TH2* histogram_process = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, histogramName_process));
       
       if ( histogram_sum ) {
 	histogram_sum->Add(histogram_process);
@@ -114,15 +138,30 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile, TF1* fit,
   return graph;
 }
 
-TGraphErrors* compMEtResolution_vs_PileUp_data(TFile* inputFile, TF1* fit, const TString& runPeriod, const TString& projection)
+TGraphErrors* compMEtResolution_vs_PileUp_data(TFile* inputFile, TF1* fit, 
+					       const std::string& central_or_shift, const TString& runPeriod, const TString& projection)
 {
   TObjArray processes;
   processes.Add(new TObjString("Data"));
-  return compMEtResolution_vs_PileUp(inputFile, fit, processes, "data", runPeriod, projection, 1.4673, 0.9235, -0.0061);
-  //return compMEtResolution_vs_PileUp(inputFile, fit, processes, "data", runPeriod, projection, 1.0000, 1.0440, -0.126);
+  double p0 = p0_data;
+  if ( central_or_shift == "vertexRecoEff_p0Up"   ) p0 += p0ErrUp_data;
+  if ( central_or_shift == "vertexRecoEff_p0Down" ) p0 -= p0ErrDown_data;
+  double p1 = p1_data;
+  if ( central_or_shift == "vertexRecoEff_p1Up"   ) p1 += p1ErrUp_data;
+  if ( central_or_shift == "vertexRecoEff_p1Down" ) p1 -= p1ErrDown_data;
+  double p2 = p2_data;
+  if ( central_or_shift == "vertexRecoEff_p2Up"   ) p2 += p2ErrUp_data;
+  if ( central_or_shift == "vertexRecoEff_p2Down" ) p2 -= p2ErrDown_data;
+  std::string central_or_shift_mod = ( central_or_shift.find("vertexRecoEff") == std::string::npos ) ?
+    central_or_shift : "central";
+  TGraphErrors* graph = compMEtResolution_vs_PileUp(inputFile, fit, processes, central_or_shift_mod , 
+						    "data", runPeriod, projection, p0, p1, p2);
+  if ( central_or_shift != "central" ) graph->SetName(Form("%s_%s", graph->GetName(), central_or_shift.data()));
+  return graph;
 }
 
-TGraphErrors* compMEtResolution_vs_PileUp_mc(TFile* inputFile, TF1* fit, const TString& runPeriod, const TString& projection)
+TGraphErrors* compMEtResolution_vs_PileUp_mc(TFile* inputFile, TF1* fit, const std::string& central_or_shift,
+					     const TString& runPeriod, const TString& projection)
 {
   TObjArray processes;
   processes.Add(new TObjString("simDYtoMuMu"));
@@ -131,7 +170,21 @@ TGraphErrors* compMEtResolution_vs_PileUp_mc(TFile* inputFile, TF1* fit, const T
   processes.Add(new TObjString("simWZ"));
   processes.Add(new TObjString("simZZ"));
   processes.Add(new TObjString("simQCD"));
-  return compMEtResolution_vs_PileUp(inputFile, fit, processes, "mc", runPeriod, projection, 1.0002, 0.7067, -0.0018);
+  double p0 = p0_mc;
+  if ( central_or_shift == "vertexRecoEff_p0Up"   ) p0 += p0ErrUp_mc;
+  if ( central_or_shift == "vertexRecoEff_p0Down" ) p0 -= p0ErrDown_mc;
+  double p1 = p1_mc;
+  if ( central_or_shift == "vertexRecoEff_p1Up"   ) p1 += p1ErrUp_mc;
+  if ( central_or_shift == "vertexRecoEff_p1Down" ) p1 -= p1ErrDown_mc;
+  double p2 = p2_mc;
+  if ( central_or_shift == "vertexRecoEff_p2Up"   ) p2 += p2ErrUp_mc;
+  if ( central_or_shift == "vertexRecoEff_p2Down" ) p2 -= p2ErrDown_mc;
+  std::string central_or_shift_mod = ( central_or_shift.find("vertexRecoEff") == std::string::npos ) ?
+    central_or_shift : "central";
+  TGraphErrors* graph = compMEtResolution_vs_PileUp(inputFile, fit, processes, central_or_shift_mod , 
+						    "mc", runPeriod, projection, p0, p1, p2);
+  if ( central_or_shift != "central" ) graph->SetName(Form("%s_%s", graph->GetName(), central_or_shift.data()));
+  return graph;
 }
 
 TF1* fitMEtResolution_vs_PileUp(TGraph* graph)
@@ -154,16 +207,24 @@ void makeMEtResolution_vs_PileUpPlot(const TString& metType,
 				     TFile* inputFile_2011runB,
 				     TF1* fit_2011runB_data, TF1* fit_2011runB_mc)
 {
-  TGraphErrors* graph_data_2011runA = compMEtResolution_vs_PileUp_data(inputFile_2011runA, fit_2011runA_data, "2011runA", projection);
+  TGraphErrors* graph_data_2011runA = 
+    compMEtResolution_vs_PileUp_data(inputFile_2011runA, fit_2011runA_data, 
+				     "central", "2011runA", projection);
   TF1* fit_data_2011runA = fitMEtResolution_vs_PileUp(graph_data_2011runA);
   
-  TGraphErrors* graph_mc_2011runA = compMEtResolution_vs_PileUp_mc(inputFile_2011runA, fit_2011runA_mc, "2011runA", projection);
+  TGraphErrors* graph_mc_2011runA = 
+    compMEtResolution_vs_PileUp_mc(inputFile_2011runA, fit_2011runA_mc, 
+				   "central", "2011runA", projection);
   TF1* fit_mc_2011runA = fitMEtResolution_vs_PileUp(graph_mc_2011runA);
   
-  TGraphErrors* graph_data_2011runB = compMEtResolution_vs_PileUp_data(inputFile_2011runB, fit_2011runB_data, "2011runB", projection);
+  TGraphErrors* graph_data_2011runB = 
+    compMEtResolution_vs_PileUp_data(inputFile_2011runB, fit_2011runB_data, 
+				     "central", "2011runB", projection);
   TF1* fit_data_2011runB = fitMEtResolution_vs_PileUp(graph_data_2011runB);
   
-  TGraphErrors* graph_mc_2011runB = compMEtResolution_vs_PileUp_mc(inputFile_2011runB, fit_2011runB_mc, "2011runB", projection);
+  TGraphErrors* graph_mc_2011runB = 
+    compMEtResolution_vs_PileUp_mc(inputFile_2011runB, fit_2011runB_mc, 	
+				   "central", "2011runB", projection);
   TF1* fit_mc_2011runB = fitMEtResolution_vs_PileUp(graph_mc_2011runB);
 
   TCanvas* canvas = new TCanvas("canvas", "canvas", 800, 720);
@@ -243,6 +304,82 @@ void makeMEtResolution_vs_PileUpPlot(const TString& metType,
   delete dummyHistogram;
   delete legend;
   delete canvas;
+}
+
+double square(double x)
+{
+  return x*x;
+}
+
+void compErr(std::map<std::string, double>& p, double p_central_value, double pErr_central_value, 
+	     TObjArray& sysUncertainties, double& errUp, double& errDown)
+{
+  double errUp2   = 0.;
+  double errDown2 = 0.;
+
+  int numSysUncertainties = sysUncertainties.GetEntries();
+  assert((numSysUncertainties % 2) == 0);
+  for ( int iSysUncertainty = 0; iSysUncertainty < (numSysUncertainties / 2); ++iSysUncertainty ) {
+    TObjString* sysUncertaintyUp = dynamic_cast<TObjString*>(sysUncertainties.At(2*iSysUncertainty));
+    TObjString* sysUncertaintyDown = dynamic_cast<TObjString*>(sysUncertainties.At(2*iSysUncertainty + 1));
+
+    double pUp   = p[sysUncertaintyUp->GetString().Data()];
+    double pDown = p[sysUncertaintyDown->GetString().Data()];
+
+    double pMin  = TMath::Min(pUp, pDown);
+    double pMax  = TMath::Max(pUp, pDown);
+
+    if ( pMin < p_central_value ) errDown2 += square(p_central_value - pMin);
+    if ( pMax > p_central_value ) errUp2   += square(pMax - p_central_value);
+  }
+
+//--- add in quadrature statistical uncertainty of fit
+  errUp2   += square(pErr_central_value);
+  errDown2 += square(pErr_central_value);
+
+  errUp   = TMath::Sqrt(errUp2);
+  errDown = TMath::Sqrt(errDown2);
+}
+
+typedef TGraphErrors* (compMEtResolution_function)(TFile*, TF1*, const std::string&, const TString&, const TString&);
+
+void computeSysUncertainties(const TString& projection,
+			     TFile* inputFile, TF1* fit, compMEtResolution_function* f, 
+			     const TString& runPeriod, TObjArray& sysUncertainties)
+{
+  TGraphErrors* graph_central_value = (*f)(inputFile, fit, "central", runPeriod, projection);
+  TF1* fit_central_value = fitMEtResolution_vs_PileUp(graph_central_value);	  
+						
+  double p0_central_value    = fit_central_value->GetParameter(0);
+  double p0Err_central_value = fit_central_value->GetParError(0);
+  double p1_central_value    = fit_central_value->GetParameter(1);
+  double p1Err_central_value = fit_central_value->GetParError(1);
+  double p2_central_value    = fit_central_value->GetParameter(2);
+  double p2Err_central_value = fit_central_value->GetParError(2);
+    
+  std::map<std::string, double> p0; // key = central or systematic uncertainty
+  std::map<std::string, double> p1; 
+  std::map<std::string, double> p2;
+
+  int numSysUncertainties = sysUncertainties.GetEntries();
+  for ( int iSysUncertainty = 0; iSysUncertainty < numSysUncertainties; ++iSysUncertainty ) {
+    TObjString* sysUncertainty = dynamic_cast<TObjString*>(sysUncertainties.At(iSysUncertainty));
+    TGraphErrors* graph_i = (*f)(inputFile, fit, sysUncertainty->GetString().Data(), runPeriod, projection);
+    TF1* fit_i = fitMEtResolution_vs_PileUp(graph_i);
+    p0[sysUncertainty->GetString().Data()] = fit_i->GetParameter(0);
+    p1[sysUncertainty->GetString().Data()] = fit_i->GetParameter(1);
+    p2[sysUncertainty->GetString().Data()] = fit_i->GetParameter(2);
+  }
+
+  double p0ErrUp, p0ErrDown;
+  compErr(p0, p0_central_value, p0Err_central_value, sysUncertainties, p0ErrUp, p0ErrDown);
+  std::cout << "sigmaZ = " << p0_central_value << " + " << p0ErrUp << " - " << p0ErrDown << std::endl;
+  double p1ErrUp, p1ErrDown;
+  compErr(p1, p1_central_value, p1Err_central_value, sysUncertainties, p1ErrUp, p1ErrDown);
+  std::cout << "alpha = " << p1_central_value << " + " << p1ErrUp << " - " << p1ErrDown << std::endl;
+  double p2ErrUp, p2ErrDown;
+  compErr(p2, p2_central_value, p2Err_central_value, sysUncertainties, p2ErrUp, p2ErrDown);
+  std::cout << "sigmaMB = " << p2_central_value << " + " << p2ErrUp << " - " << p2ErrDown << std::endl;
 }
 
 TString getFileName_full(const TString& path, const TString& fileName)
@@ -355,6 +492,102 @@ void makeMEtResolution_vs_PileUpPlots()
 				  0, 0,
 				  inputFile_pfMEtType1corrected_2011runB, 
 				  0, 0);
+
+  TObjArray sysUncertainties_data;
+  sysUncertainties_data.Add(new TObjString("vertexRecoEff_p0Up"));
+  sysUncertainties_data.Add(new TObjString("vertexRecoEff_p0Down"));
+  sysUncertainties_data.Add(new TObjString("vertexRecoEff_p1Up"));
+  sysUncertainties_data.Add(new TObjString("vertexRecoEff_p1Down"));
+  sysUncertainties_data.Add(new TObjString("vertexRecoEff_p2Up"));
+  sysUncertainties_data.Add(new TObjString("vertexRecoEff_p2Down"));
+
+  std::cout << "computing uncertainties on uParl, rawPFMEt, 2011 run A data:" << std::endl;
+  computeSysUncertainties("uParl", inputFile_pfMEt_2011runA, 
+			  fit_uParl_pfMEt_2011runA_data, &compMEtResolution_vs_PileUp_data,
+			  "2011runA", sysUncertainties_data);
+  std::cout << "computing uncertainties on uPerp, rawPFMEt, 2011 run A data:" << std::endl;
+  computeSysUncertainties("uPerp", inputFile_pfMEt_2011runA, 
+			  0, &compMEtResolution_vs_PileUp_data,
+			  "2011runA", sysUncertainties_data);
+
+  std::cout << "computing uncertainties on uParl, rawPFMEt, 2011 run B data:" << std::endl;
+  computeSysUncertainties("uParl", inputFile_pfMEt_2011runB, 
+			  fit_uParl_pfMEt_2011runB_data, &compMEtResolution_vs_PileUp_data,
+			  "2011runB", sysUncertainties_data);
+  std::cout << "computing uncertainties on uPerp, rawPFMEt, 2011 run B data:" << std::endl;
+  computeSysUncertainties("uPerp", inputFile_pfMEt_2011runB, 
+			  0, &compMEtResolution_vs_PileUp_data,
+			  "2011runB", sysUncertainties_data);
+
+  std::cout << "computing uncertainties on uParl, Type1correctedPFMEt, 2011 run A data:" << std::endl;
+  computeSysUncertainties("uParl", inputFile_pfMEtType1corrected_2011runA, 
+			  fit_uParl_pfMEtType1corrected_2011runA_data, &compMEtResolution_vs_PileUp_data,
+			  "2011runA", sysUncertainties_data);
+  std::cout << "computing uncertainties on uPerp, Type1correctedPFMEt, 2011 run A data:" << std::endl;
+  computeSysUncertainties("uPerp", inputFile_pfMEtType1corrected_2011runA, 
+			  0, &compMEtResolution_vs_PileUp_data,
+			  "2011runA", sysUncertainties_data);
+
+  std::cout << "computing uncertainties on uParl, Type1correctedPFMEt, 2011 run B data:" << std::endl;
+  computeSysUncertainties("uParl", inputFile_pfMEtType1corrected_2011runB, 
+			  fit_uParl_pfMEtType1corrected_2011runB_data, &compMEtResolution_vs_PileUp_data,
+			  "2011runB", sysUncertainties_data);
+  std::cout << "computing uncertainties on uPerp, Type1correctedPFMEt, 2011 run B data:" << std::endl;
+  computeSysUncertainties("uPerp", inputFile_pfMEtType1corrected_2011runB, 
+			  0, &compMEtResolution_vs_PileUp_data,
+			  "2011runB", sysUncertainties_data);
+
+  TObjArray sysUncertainties_mc;
+  sysUncertainties_mc.Add(new TObjString("vertexRecoEff_p0Up"));
+  sysUncertainties_mc.Add(new TObjString("vertexRecoEff_p0Down"));
+  sysUncertainties_mc.Add(new TObjString("vertexRecoEff_p1Up"));
+  sysUncertainties_mc.Add(new TObjString("vertexRecoEff_p1Down"));
+  sysUncertainties_mc.Add(new TObjString("vertexRecoEff_p2Up"));
+  sysUncertainties_mc.Add(new TObjString("vertexRecoEff_p2Down"));
+  sysUncertainties_mc.Add(new TObjString("jetEnUp"));
+  sysUncertainties_mc.Add(new TObjString("jetEnDown"));
+  sysUncertainties_mc.Add(new TObjString("jetResUp"));
+  sysUncertainties_mc.Add(new TObjString("jetResDown"));
+  sysUncertainties_mc.Add(new TObjString("unclEnUp"));
+  sysUncertainties_mc.Add(new TObjString("unclEnDown"));
+  sysUncertainties_mc.Add(new TObjString("vertexRecoEffUp"));
+  sysUncertainties_mc.Add(new TObjString("vertexRecoEffDown"));
+
+  std::cout << "computing uncertainties on uParl, rawPFMEt, Monte Carlo 2011 run A:" << std::endl;
+  computeSysUncertainties("uParl", inputFile_pfMEt_2011runA, 
+			  fit_uParl_pfMEt_2011runA_mc, &compMEtResolution_vs_PileUp_mc,
+			  "2011runA", sysUncertainties_mc);
+  std::cout << "computing uncertainties on uPerp, rawPFMEt, Monte Carlo 2011 run A:" << std::endl;
+  computeSysUncertainties("uPerp", inputFile_pfMEt_2011runA, 
+			  0, &compMEtResolution_vs_PileUp_mc,
+			  "2011runA", sysUncertainties_mc);
+
+  std::cout << "computing uncertainties on uParl, rawPFMEt, Monte Carlo 2011 run B:" << std::endl;
+  computeSysUncertainties("uParl", inputFile_pfMEt_2011runB, 
+			  fit_uParl_pfMEt_2011runB_mc, &compMEtResolution_vs_PileUp_mc,
+			  "2011runB", sysUncertainties_mc);
+  std::cout << "computing uncertainties on uPerp, rawPFMEt, Monte Carlo 2011 run B:" << std::endl;
+  computeSysUncertainties("uPerp", inputFile_pfMEt_2011runB, 
+			  0, &compMEtResolution_vs_PileUp_mc,
+			  "2011runB", sysUncertainties_mc);
+
+  std::cout << "computing uncertainties on uParl, Type1correctedPFMEt, Monte Carlo 2011 run A:" << std::endl;
+  computeSysUncertainties("uParl", inputFile_pfMEtType1corrected_2011runA, 
+			  fit_uParl_pfMEtType1corrected_2011runA_mc, &compMEtResolution_vs_PileUp_mc,
+			  "2011runA", sysUncertainties_mc);
+  std::cout << "computing uncertainties on uPerp, Type1correctedPFMEt, Monte Carlo 2011 run A:" << std::endl;
+  computeSysUncertainties("uPerp", inputFile_pfMEtType1corrected_2011runA, 
+			  0, &compMEtResolution_vs_PileUp_mc,
+			  "2011runA", sysUncertainties_mc);
+
+  std::cout << "computing uncertainties on uParl, Type1correctedPFMEt, Monte Carlo 2011 run B:" << std::endl;
+  computeSysUncertainties("uParl", inputFile_pfMEtType1corrected_2011runB, 
+			  fit_uParl_pfMEtType1corrected_2011runB_mc, &compMEtResolution_vs_PileUp_mc,
+			  "2011runB", sysUncertainties_mc);
+  std::cout << "computing uncertainties on uPerp, Type1correctedPFMEt, Monte Carlo 2011 run B:" << std::endl;
+  computeSysUncertainties("uPerp", inputFile_pfMEtType1corrected_2011runB, 
+			  0, &compMEtResolution_vs_PileUp_mc,
+			  "2011runB", sysUncertainties_mc);
 
   delete inputFile_pfMEt_2011runA;
   delete inputFile_pfMEt_2011runB;
