@@ -16,6 +16,7 @@
 #include <map>
 #include <iostream>
 #include <iomanip>
+#include <fstream>
 
 const double p0_data        =  1.4673;
 const double p0ErrUp_data   =  0.0532;
@@ -36,6 +37,10 @@ const double p1ErrDown_mc   =  0.0008;
 const double p2_mc          = -0.0018;
 const double p2ErrUp_mc     =  0.0001;
 const double p2ErrDown_mc   =  0.0001;
+
+typedef std::map<std::string, double> valueMap1;
+typedef std::map<std::string, valueMap1> valueMap2;
+typedef std::map<std::string, valueMap2> valueMap3;
 
 TH1* getHistogram(TFile* inputFile, const TString& dqmDirectory, const TString& meName)
 {  
@@ -345,7 +350,8 @@ typedef TGraphErrors* (compMEtResolution_function)(TFile*, TF1*, const std::stri
 
 void computeSysUncertainties(const TString& projection,
 			     TFile* inputFile, TF1* fit, compMEtResolution_function* f, 
-			     const TString& runPeriod, TObjArray& sysUncertainties)
+			     const TString& runPeriod, TObjArray& sysUncertainties,
+			     valueMap3& resolution)
 {
   TGraphErrors* graph_central_value = (*f)(inputFile, fit, "central", runPeriod, projection);
   TF1* fit_central_value = fitMEtResolution_vs_PileUp(graph_central_value);	  
@@ -373,12 +379,23 @@ void computeSysUncertainties(const TString& projection,
 
   double p0ErrUp, p0ErrDown;
   compErr(p0, p0_central_value, p0Err_central_value, sysUncertainties, p0ErrUp, p0ErrDown);
+  resolution[projection.Data()]["sigmaZ"]["value"] = p0_central_value;
+  resolution[projection.Data()]["sigmaZ"]["errUp"] = p0ErrUp;
+  resolution[projection.Data()]["sigmaZ"]["errDown"] = p0ErrDown;
   std::cout << "sigmaZ = " << p0_central_value << " + " << p0ErrUp << " - " << p0ErrDown << std::endl;
+
   double p1ErrUp, p1ErrDown;
   compErr(p1, p1_central_value, p1Err_central_value, sysUncertainties, p1ErrUp, p1ErrDown);
+  resolution[projection.Data()]["alpha"]["value"] = p1_central_value;
+  resolution[projection.Data()]["alpha"]["errUp"] = p1ErrUp;
+  resolution[projection.Data()]["alpha"]["errDown"] = p1ErrDown;
   std::cout << "alpha = " << p1_central_value << " + " << p1ErrUp << " - " << p1ErrDown << std::endl;
+
   double p2ErrUp, p2ErrDown;
   compErr(p2, p2_central_value, p2Err_central_value, sysUncertainties, p2ErrUp, p2ErrDown);
+  resolution[projection.Data()]["sigmaMB"]["value"] = p2_central_value;
+  resolution[projection.Data()]["sigmaMB"]["errUp"] = p2ErrUp;
+  resolution[projection.Data()]["sigmaMB"]["errDown"] = p2ErrDown;
   std::cout << "sigmaMB = " << p2_central_value << " + " << p2ErrUp << " - " << p2ErrDown << std::endl;
 }
 
@@ -395,6 +412,38 @@ void setFitParameter(TF1* fit, double r_had, double alpha, double beta)
   fit->SetParameter(0, r_had);
   fit->SetParameter(1, alpha);
   fit->SetParameter(2, beta);
+}
+
+void printResolutionRow(std::ofstream& table, 
+			const std::string& projection,
+			const std::string& parameterTitle, const std::string& parameterName,
+			valueMap3& resolution_data, valueMap3& resolution_mc)
+{
+  table << "$" << parameterTitle << "$ & $" 
+	<< std::fixed << std::setprecision(3)
+	<< resolution_data[projection][parameterName]["value"]  
+	<< "^{+" << resolution_data[projection][parameterName]["errUp"] << "}"
+    	<< "_{-" << resolution_data[projection][parameterName]["errDown"] << "}$ & $" 
+	<< resolution_mc[projection][parameterName]["value"]  
+	<< "^{+" << resolution_mc[projection][parameterName]["errUp"] << "}"
+    	<< "_{-" << resolution_mc[projection][parameterName]["errDown"] << "}$ \\\\" << std::endl;
+}
+
+void printResolutionTable(std::ofstream& table, 
+			  const std::string& runPeriod, 
+			  valueMap3& resolution_data, valueMap3& resolution_mc)
+{
+  table << "\\hline" << std::endl;
+  table << "\\multicolumn{3}{|c|}{" << runPeriod << "} \\\\" << std::endl;
+  table << "\\hline" << std::endl;
+  printResolutionRow(table, "uParl", "\\sigma_{Z}^{\\parallel}",  "sigmaZ",  resolution_data, resolution_mc);
+  printResolutionRow(table, "uParl", "\\sigma_{MB}^{\\parallel}", "sigmaMB", resolution_data, resolution_mc);
+  printResolutionRow(table, "uParl", "\\alpha_{\\parallel}",      "alpha",   resolution_data, resolution_mc);
+  table << "\\hline" << std::endl;
+  printResolutionRow(table, "uPerp", "\\sigma_{Z}^{\\perp}",      "sigmaZ",  resolution_data, resolution_mc);
+  printResolutionRow(table, "uPerp", "\\sigma_{MB}^{\\perp}",     "sigmaMB", resolution_data, resolution_mc);
+  printResolutionRow(table, "uPerp", "\\alpha_{\\perp}",          "alpha",   resolution_data, resolution_mc);
+  table << "\\hline" << std::endl;
 }
 
 void makeMEtResolution_vs_PileUpPlots()
@@ -501,41 +550,49 @@ void makeMEtResolution_vs_PileUpPlots()
   sysUncertainties_data.Add(new TObjString("vertexRecoEff_p2Up"));
   sysUncertainties_data.Add(new TObjString("vertexRecoEff_p2Down"));
 
+  valueMap3 resolution_pfMEt_2011runA_data; // key = 'uParl'/'uPerp', 'sigmaZ'/'sigmaMB'/'alpha', 'value'/'errUp'/'errDown'
+
   std::cout << "computing uncertainties on uParl, rawPFMEt, 2011 run A data:" << std::endl;
   computeSysUncertainties("uParl", inputFile_pfMEt_2011runA, 
 			  fit_uParl_pfMEt_2011runA_data, &compMEtResolution_vs_PileUp_data,
-			  "2011runA", sysUncertainties_data);
+			  "2011runA", sysUncertainties_data, resolution_pfMEt_2011runA_data);
   std::cout << "computing uncertainties on uPerp, rawPFMEt, 2011 run A data:" << std::endl;
   computeSysUncertainties("uPerp", inputFile_pfMEt_2011runA, 
 			  0, &compMEtResolution_vs_PileUp_data,
-			  "2011runA", sysUncertainties_data);
+			  "2011runA", sysUncertainties_data, resolution_pfMEt_2011runA_data);
+
+  valueMap3 resolution_pfMEt_2011runB_data; // key = 'uParl'/'uPerp', 'sigmaZ'/'sigmaMB'/'alpha', 'value'/'errUp'/'errDown'
 
   std::cout << "computing uncertainties on uParl, rawPFMEt, 2011 run B data:" << std::endl;
   computeSysUncertainties("uParl", inputFile_pfMEt_2011runB, 
 			  fit_uParl_pfMEt_2011runB_data, &compMEtResolution_vs_PileUp_data,
-			  "2011runB", sysUncertainties_data);
+			  "2011runB", sysUncertainties_data, resolution_pfMEt_2011runB_data);
   std::cout << "computing uncertainties on uPerp, rawPFMEt, 2011 run B data:" << std::endl;
   computeSysUncertainties("uPerp", inputFile_pfMEt_2011runB, 
 			  0, &compMEtResolution_vs_PileUp_data,
-			  "2011runB", sysUncertainties_data);
+			  "2011runB", sysUncertainties_data, resolution_pfMEt_2011runB_data);
+
+  valueMap3 resolution_pfMEtType1corrected_2011runA_data; // key = 'uParl'/'uPerp', 'sigmaZ'/'sigmaMB'/'alpha', 'value'/'errUp'/'errDown'
 
   std::cout << "computing uncertainties on uParl, Type1correctedPFMEt, 2011 run A data:" << std::endl;
   computeSysUncertainties("uParl", inputFile_pfMEtType1corrected_2011runA, 
 			  fit_uParl_pfMEtType1corrected_2011runA_data, &compMEtResolution_vs_PileUp_data,
-			  "2011runA", sysUncertainties_data);
+			  "2011runA", sysUncertainties_data, resolution_pfMEtType1corrected_2011runA_data);
   std::cout << "computing uncertainties on uPerp, Type1correctedPFMEt, 2011 run A data:" << std::endl;
   computeSysUncertainties("uPerp", inputFile_pfMEtType1corrected_2011runA, 
 			  0, &compMEtResolution_vs_PileUp_data,
-			  "2011runA", sysUncertainties_data);
+			  "2011runA", sysUncertainties_data, resolution_pfMEtType1corrected_2011runA_data);
+
+  valueMap3 resolution_pfMEtType1corrected_2011runB_data; // key = 'uParl'/'uPerp', 'sigmaZ'/'sigmaMB'/'alpha', 'value'/'errUp'/'errDown'
 
   std::cout << "computing uncertainties on uParl, Type1correctedPFMEt, 2011 run B data:" << std::endl;
   computeSysUncertainties("uParl", inputFile_pfMEtType1corrected_2011runB, 
 			  fit_uParl_pfMEtType1corrected_2011runB_data, &compMEtResolution_vs_PileUp_data,
-			  "2011runB", sysUncertainties_data);
+			  "2011runB", sysUncertainties_data, resolution_pfMEtType1corrected_2011runB_data);
   std::cout << "computing uncertainties on uPerp, Type1correctedPFMEt, 2011 run B data:" << std::endl;
   computeSysUncertainties("uPerp", inputFile_pfMEtType1corrected_2011runB, 
 			  0, &compMEtResolution_vs_PileUp_data,
-			  "2011runB", sysUncertainties_data);
+			  "2011runB", sysUncertainties_data, resolution_pfMEtType1corrected_2011runB_data);
 
   TObjArray sysUncertainties_mc;
   sysUncertainties_mc.Add(new TObjString("vertexRecoEff_p0Up"));
@@ -553,41 +610,65 @@ void makeMEtResolution_vs_PileUpPlots()
   sysUncertainties_mc.Add(new TObjString("vertexRecoEffUp"));
   sysUncertainties_mc.Add(new TObjString("vertexRecoEffDown"));
 
+  valueMap3 resolution_pfMEt_2011runA_mc; // key = 'uParl'/'uPerp', 'sigmaZ'/'sigmaMB'/'alpha', 'value'/'errUp'/'errDown'
+
   std::cout << "computing uncertainties on uParl, rawPFMEt, Monte Carlo 2011 run A:" << std::endl;
   computeSysUncertainties("uParl", inputFile_pfMEt_2011runA, 
 			  fit_uParl_pfMEt_2011runA_mc, &compMEtResolution_vs_PileUp_mc,
-			  "2011runA", sysUncertainties_mc);
+			  "2011runA", sysUncertainties_mc, resolution_pfMEt_2011runA_mc);
   std::cout << "computing uncertainties on uPerp, rawPFMEt, Monte Carlo 2011 run A:" << std::endl;
   computeSysUncertainties("uPerp", inputFile_pfMEt_2011runA, 
 			  0, &compMEtResolution_vs_PileUp_mc,
-			  "2011runA", sysUncertainties_mc);
+			  "2011runA", sysUncertainties_mc, resolution_pfMEt_2011runA_mc);
+
+  valueMap3 resolution_pfMEt_2011runB_mc; // key = 'uParl'/'uPerp', 'sigmaZ'/'sigmaMB'/'alpha', 'value'/'errUp'/'errDown'
 
   std::cout << "computing uncertainties on uParl, rawPFMEt, Monte Carlo 2011 run B:" << std::endl;
   computeSysUncertainties("uParl", inputFile_pfMEt_2011runB, 
 			  fit_uParl_pfMEt_2011runB_mc, &compMEtResolution_vs_PileUp_mc,
-			  "2011runB", sysUncertainties_mc);
+			  "2011runB", sysUncertainties_mc, resolution_pfMEt_2011runB_mc);
   std::cout << "computing uncertainties on uPerp, rawPFMEt, Monte Carlo 2011 run B:" << std::endl;
   computeSysUncertainties("uPerp", inputFile_pfMEt_2011runB, 
 			  0, &compMEtResolution_vs_PileUp_mc,
-			  "2011runB", sysUncertainties_mc);
+			  "2011runB", sysUncertainties_mc, resolution_pfMEt_2011runB_mc);
+
+  valueMap3 resolution_pfMEtType1corrected_2011runA_mc; // key = 'uParl'/'uPerp', 'sigmaZ'/'sigmaMB'/'alpha', 'value'/'errUp'/'errDown'
 
   std::cout << "computing uncertainties on uParl, Type1correctedPFMEt, Monte Carlo 2011 run A:" << std::endl;
   computeSysUncertainties("uParl", inputFile_pfMEtType1corrected_2011runA, 
 			  fit_uParl_pfMEtType1corrected_2011runA_mc, &compMEtResolution_vs_PileUp_mc,
-			  "2011runA", sysUncertainties_mc);
+			  "2011runA", sysUncertainties_mc, resolution_pfMEtType1corrected_2011runA_mc);
   std::cout << "computing uncertainties on uPerp, Type1correctedPFMEt, Monte Carlo 2011 run A:" << std::endl;
   computeSysUncertainties("uPerp", inputFile_pfMEtType1corrected_2011runA, 
 			  0, &compMEtResolution_vs_PileUp_mc,
-			  "2011runA", sysUncertainties_mc);
+			  "2011runA", sysUncertainties_mc, resolution_pfMEtType1corrected_2011runA_mc);
+
+  valueMap3 resolution_pfMEtType1corrected_2011runB_mc; // key = 'uParl'/'uPerp', 'sigmaZ'/'sigmaMB'/'alpha', 'value'/'errUp'/'errDown'
 
   std::cout << "computing uncertainties on uParl, Type1correctedPFMEt, Monte Carlo 2011 run B:" << std::endl;
   computeSysUncertainties("uParl", inputFile_pfMEtType1corrected_2011runB, 
 			  fit_uParl_pfMEtType1corrected_2011runB_mc, &compMEtResolution_vs_PileUp_mc,
-			  "2011runB", sysUncertainties_mc);
+			  "2011runB", sysUncertainties_mc, resolution_pfMEtType1corrected_2011runB_mc);
   std::cout << "computing uncertainties on uPerp, Type1correctedPFMEt, Monte Carlo 2011 run B:" << std::endl;
   computeSysUncertainties("uPerp", inputFile_pfMEtType1corrected_2011runB, 
 			  0, &compMEtResolution_vs_PileUp_mc,
-			  "2011runB", sysUncertainties_mc);
+			  "2011runB", sysUncertainties_mc, resolution_pfMEtType1corrected_2011runB_mc);
+
+  std::ofstream* resolutionTable_pfMEt = 
+    new std::ofstream("makeMEtResolution_vs_PileUpPlots_pfMEt.tex", std::ios::out);
+  printResolutionTable(*resolutionTable_pfMEt, "Run period A", 
+		       resolution_pfMEt_2011runA_data, resolution_pfMEt_2011runA_mc);
+  printResolutionTable(*resolutionTable_pfMEt, "Run period B", 
+		       resolution_pfMEt_2011runB_data, resolution_pfMEt_2011runB_mc);
+  delete resolutionTable_pfMEt;
+
+  std::ofstream* resolutionTable_pfMEtType1corrected = 
+    new std::ofstream("makeMEtResolution_vs_PileUpPlots_pfMEtType1corrected.tex", std::ios::out);
+  printResolutionTable(*resolutionTable_pfMEtType1corrected, "Run period A", 
+		       resolution_pfMEtType1corrected_2011runA_data, resolution_pfMEtType1corrected_2011runA_mc);
+  printResolutionTable(*resolutionTable_pfMEtType1corrected, "Run period B", 
+		       resolution_pfMEtType1corrected_2011runB_data, resolution_pfMEtType1corrected_2011runB_mc);
+  delete resolutionTable_pfMEtType1corrected;
 
   delete inputFile_pfMEt_2011runA;
   delete inputFile_pfMEt_2011runB;
