@@ -18,15 +18,15 @@
 #include <iomanip>
 #include <fstream>
 
-const double p0_data        =  1.4673;
-const double p0ErrUp_data   =  0.0532;
-const double p0ErrDown_data =  0.4673;
-const double p1_data        =  0.9235;
-const double p1ErrUp_data   =  0.0138;
-const double p1ErrDown_data =  0.0138;
-const double p2_data        = -0.0018;
-const double p2ErrUp_data   =  0.0043;
-const double p2ErrDown_data =  0.0018;
+const double p0_data        =  0.8208;
+const double p0ErrUp_data   =  0.0358;
+const double p0ErrDown_data =  0.0358;
+const double p1_data        =  0.7189;
+const double p1ErrUp_data   =  0.0074;
+const double p1ErrDown_data =  0.0074;
+const double p2_data        = -0.0010;
+const double p2ErrUp_data   =  0.0003;
+const double p2ErrDown_data =  0.0003;
 
 const double p0_mc          =  1.0002;
 const double p0ErrUp_mc     =  0.0005;
