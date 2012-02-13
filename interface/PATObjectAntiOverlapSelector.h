@@ -10,9 +10,9 @@
  *  modified by Konstantinos A. Petridis,
  *              Christian Veelken
  *
- * \version $Revision: 1.4 $
+ * \version $Revision: 1.1 $
  *
- * $Id: PATObjectAntiOverlapSelector.h,v 1.4 2009/10/25 12:38:23 veelken Exp $
+ * $Id: PATObjectAntiOverlapSelector.h,v 1.1 2010/11/19 14:21:02 veelken Exp $
  *
  */
 
@@ -38,7 +38,8 @@ class PATObjectAntiOverlapSelector
   {
     srcNotToBeFiltered_ = cfg.getParameter<vInputTag>("srcNotToBeFiltered");
     dRmin_ = cfg.getParameter<double>("dRmin");
-    invert_ = cfg.getUntrackedParameter<bool>("invert",false);
+    invert_ = ( cfg.exists("invert") ) ?
+      cfg.getParameter<bool>("invert") : false;
   }
 
   typename std::vector<const T*>::const_iterator begin() const { return selected_.begin(); }
