@@ -86,7 +86,8 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile, TF1* fit,
   //if      ( std::string(runPeriod.Data()) == "2011runA" ) numVertices = 24;
   //else if ( std::string(runPeriod.Data()) == "2011runB" ) numVertices = 34;
   //else assert(0);
-  int numVertices = 34;
+  int numVertices = 24;
+  //int numVertices = 34;
 
   TGraphErrors* graph = new TGraphErrors(numVertices);
 
@@ -102,7 +103,7 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile, TF1* fit,
       if ( central_or_shift != "central" ) dqmDirectory.Append("/").Append(central_or_shift.data());
       TString histogramName_process = Form("%sVsQtNumVerticesEq%i", projection.Data(), iVertex);
       TH2* histogram_process = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, histogramName_process));
-      
+
       if ( histogram_sum ) {
 	histogram_sum->Add(histogram_process);
       } else {
@@ -201,7 +202,7 @@ TGraphErrors* compMEtResolution_vs_PileUp_mc(TFile* inputFile, TF1* fit, const s
   //if      ( std::string(runPeriod.Data()) == "2011runA" ) processes.Add(new TObjString("simDYtoMuMu"));
   //else if ( std::string(runPeriod.Data()) == "2011runB" ) processes.Add(new TObjString("simDYtoMuMu_highPUscenario"));
   //else assert(0);
-  processes.Add(new TObjString("simDYtoMuMu_highPUscenario"));
+  processes.Add(new TObjString("simDYtoMuMu"));
   //processes.Add(new TObjString("simTTplusJets"));
   //processes.Add(new TObjString("simWW"));
   //processes.Add(new TObjString("simWZ"));
@@ -263,12 +264,13 @@ TGraphErrors* makeGraph_data_div_mc(TGraphErrors* graph_data, TGraphErrors* grap
     double yErr_data = graph_data->GetErrorY(iPoint);
     
     double x_mc, y_mc;
-    graph_data->GetPoint(iPoint, x_mc, y_mc);
+    graph_mc->GetPoint(iPoint, x_mc, y_mc);
     assert(x_mc == x_data);
     double xErr_mc = graph_mc->GetErrorX(iPoint);
     double yErr_mc = graph_mc->GetErrorY(iPoint);
     
     double y_diff = (y_data - y_mc)/y_mc;
+    //std::cout << "x = " << x_data << ": y(data) = " << y_data << ", y(mc) = " << y_mc << " --> dy = " << y_diff << std::endl;
     double yErr2_diff = 0.;
     if ( y_data > 0. ) yErr2_diff += square(yErr_data/y_data);
     yErr2_diff += square(yErr_mc/y_mc);
@@ -346,7 +348,7 @@ void makeMEtResolution_vs_PileUpPlot(const TString& metType,
 				       "central", "2011runB", projection);
     fit_data_2011runB = fitMEtResolution_vs_PileUp(graph_data_2011runB);
   }
-  
+
   TGraphErrors* graph_mc_2011runB = 0;
   TF1* fit_mc_2011runB = 0;
   if ( draw_2011runB_mc ) {
@@ -381,7 +383,8 @@ void makeMEtResolution_vs_PileUpPlot(const TString& metType,
   topPad->Draw();
   topPad->cd();
 
-  TH1* dummyHistogram_top = new TH1D("dummyHistogram_top", "dummyHistogram_top", 36, -0.5, 35.5);
+  //TH1* dummyHistogram_top = new TH1D("dummyHistogram_top", "dummyHistogram_top", 36, -0.5, 35.5);
+  TH1* dummyHistogram_top = new TH1D("dummyHistogram_top", "dummyHistogram_top", 26, -0.5, 25.5);
   dummyHistogram_top->SetTitle("");
   dummyHistogram_top->SetStats(false);
   dummyHistogram_top->SetMaximum(40.);
@@ -456,8 +459,7 @@ void makeMEtResolution_vs_PileUpPlot(const TString& metType,
   if ( draw_2011runA_data ) legend->AddEntry(graph_data_2011runA, "Run A Data", "p");
   if ( draw_2011runA_mc   ) legend->AddEntry(graph_mc_2011runA,   "sim. Run A", "p");
   if ( draw_2011runB_data ) legend->AddEntry(graph_data_2011runB, "Run B Data", "p");
-  //if ( draw_2011runB_mc   ) legend->AddEntry(graph_mc_2011runB,   "sim. Run B", "p");
-  if ( draw_2011runB_mc   ) legend->AddEntry(graph_mc_2011runB,   "sim. High-PU", "p");
+  if ( draw_2011runB_mc   ) legend->AddEntry(graph_mc_2011runB,   "sim. Run B", "p");
   legend->Draw();	
 
   canvas->cd();
@@ -681,12 +683,12 @@ void makeMEtResolution_vs_PileUpPlots()
 //--- suppress the output canvas 
   gROOT->SetBatch(true);
 
-  TString inputFilePath_2011runA = "/data1/veelken/tmp/ZllRecoilCorrection/v4_5/2011RunA/";
+  TString inputFilePath_2011runA = "/data1/veelken/tmp/ZllRecoilCorrection/v4_14_3corr/2011RunA/";
 
   TString inputFileName_pfMEt_2011runA = "analyzeZllRecoilCorrectionHistograms_all_pfMEtSmeared.root";
   TString inputFileName_pfMEtType1corrected_2011runA = "analyzeZllRecoilCorrectionHistograms_all_pfMEtTypeIcorrectedSmeared.root";
 
-  TString inputFilePath_2011runB = "/data1/veelken/tmp/ZllRecoilCorrection/v4_7_highPUscenario/2011RunB/";
+  TString inputFilePath_2011runB = "/data1/veelken/tmp/ZllRecoilCorrection/v4_14_3corr/2011RunB/";
 
   TString inputFileName_pfMEt_2011runB = "analyzeZllRecoilCorrectionHistograms_all_pfMEtSmeared.root";
   TString inputFileName_pfMEtType1corrected_2011runB = "analyzeZllRecoilCorrectionHistograms_all_pfMEtTypeIcorrectedSmeared.root";
@@ -744,7 +746,7 @@ void makeMEtResolution_vs_PileUpPlots()
     new TF1("fit_uParl_pfMEtType1corrected_2011runB_data", 
 	    fit_uParl_formula.Data(), fit_uParl_xMin, fit_uParl_xMax);
   setFitParameter(fit_uParl_pfMEtType1corrected_2011runB_mc, 1.004, 0.125, 0.673);
-
+/*
   makeMEtResolution_vs_PileUpPlot("rawPFMEt", 
 				  "uParl", "RMS(u_{#parallel} ) / GeV", 
 				  inputFile_pfMEt_2011runA, 
@@ -757,6 +759,7 @@ void makeMEtResolution_vs_PileUpPlots()
 				  0, 0, 
 				  inputFile_pfMEt_2011runB, 
 				  0, 0);
+ */
   makeMEtResolution_vs_PileUpPlot("Type1correctedPFMEt", 
 				  "uParl", "RMS(u_{#parallel} ) / GeV", 
 				  inputFile_pfMEtType1corrected_2011runA, 
