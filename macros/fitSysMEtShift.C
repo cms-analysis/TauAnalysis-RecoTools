@@ -208,20 +208,18 @@ void fitMETxyVsSumEt(const TH2* histogram2d, double xMin, double xMax, double xS
 
 void fitSysMEtShift()
 {
-  //std::string sample = "Data";
-  std::string sample = "simDYtoMuMu";
+  std::string sample = "Data";
+  //std::string sample = "ZplusJets_madgraph2";
 
-  //std::string runPeriod = "2011RunA";
-  std::string runPeriod = "2011RunB";
+  std::string runPeriod = "2012RunA";
 
   std::string inputFilePath;
-  if      ( runPeriod == "2011RunA" ) inputFilePath = "/data1/veelken/tmp/ZllRecoilCorrection/v4_14_3corr/2011RunA/";
-  else if ( runPeriod == "2011RunB" ) inputFilePath = "/data1/veelken/tmp/ZllRecoilCorrection/v4_14_3corr/2011RunB/";
+  if      ( runPeriod == "2012RunA" ) inputFilePath = "/data1/veelken/tmp/ZllRecoilCorrection/v5_19_woMEtSysShiftCorr/2012RunA";
   else assert(0);
 
   std::string inputFileName;
-  if      ( sample == "Data"        ) inputFileName = "analyzeZllRecoilCorrectionHistograms_Data_pfMEtTypeIcorrected_central.root";
-  else if ( sample == "simDYtoMuMu" ) inputFileName = "analyzeZllRecoilCorrectionHistograms_simDYtoMuMu_pfMEtTypeIcorrectedSmeared_central.root";
+  if      ( sample == "Data"                ) inputFileName = "analyzeZllRecoilCorrectionHistograms_Data_pfMEtTypeIcorrectedSmeared_central.root";
+  else if ( sample == "ZplusJets_madgraph2" ) inputFileName = "analyzeZllRecoilCorrectionHistograms_ZplusJets_madgraph2_pfMEtTypeIcorrectedSmeared_central.root";
 
   TString inputFileName_full = inputFilePath.data();
   if ( !inputFileName_full.EndsWith("/") ) inputFileName_full.Append("/");
@@ -235,29 +233,29 @@ void fitSysMEtShift()
 
   TString meNameMETxVsSumEt = "metXvsSumEt";
   TH2* histogramMETxVsSumEt = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, meNameMETxVsSumEt));
-  TString meNameMETxVsNumVertices = "metXvsNumVertices";
-  TH2* histogramMETxVsNumVertices = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, meNameMETxVsNumVertices));
   TString meNameMETyVsSumEt = "metYvsSumEt";
   TH2* histogramMETyVsSumEt = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, meNameMETyVsSumEt));
 
+  std::cout << "running PFMET sys. Shift fits vs. sumEt... (sample = " << sample << ")" << std::endl;
   std::string outputFileNameMETxVsSumEt = Form("plots/sysMETxShiftVsSumEt_%s_%s.eps", sample.data(), runPeriod.data());
   fitMETxyVsSumEt(histogramMETxVsSumEt, 120., 800., 5., 
 		  "#Sigma E_{T}", "#Sigma E_{T} / GeV", "<E_{x}^{miss}> / GeV", outputFileNameMETxVsSumEt);
   std::string outputFileNameMETyVsSumEt = Form("plots/sysMETyShiftVsSumEt_%s_%s.eps", sample.data(), runPeriod.data());
   fitMETxyVsSumEt(histogramMETyVsSumEt, 120., 800., 5.,
 		  "#Sigma E_{T}", "#Sigma E_{T} / GeV", "<E_{y}^{miss}> / GeV", outputFileNameMETyVsSumEt);
-/*
+
   TString meNameMETxVsNumVertices = "metXvsNumVertices";
   TH2* histogramMETxVsNumVertices = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, meNameMETxVsNumVertices));
   TString meNameMETyVsNumVertices = "metYvsNumVertices";
   TH2* histogramMETyVsNumVertices = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, meNameMETyVsNumVertices));
 
+  std::cout << "running PFMET sys. Shift fits vs. Nvtx... (sample = " << sample << ")" << std::endl;
   std::string outputFileNameMETxVsNumVertices = Form("plots/sysMETxShiftVsNumVertices_%s_%s.eps", sample.data(), runPeriod.data());
   fitMETxyVsSumEt(histogramMETxVsNumVertices, 0., 25., 0.5,
 		  "N_{vtx}", "N_{vtx}", "<E_{x}^{miss}> / GeV", outputFileNameMETxVsNumVertices);
   std::string outputFileNameMETyVsNumVertices = Form("plots/sysMETyShiftVsNumVertices_%s_%s.eps", sample.data(), runPeriod.data());
   fitMETxyVsSumEt(histogramMETyVsNumVertices, 0., 25., 0.5, 
 		  "N_{vtx}", "N_{vtx}", "<E_{y}^{miss}> / GeV", outputFileNameMETyVsNumVertices);
- */
+ 
   delete inputFile;
 }
