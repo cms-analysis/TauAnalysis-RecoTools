@@ -1,4 +1,10 @@
 
+#include "FWCore/FWLite/interface/AutoLibraryLoader.h"
+
+#include "FWCore/Utilities/interface/Exception.h"
+
+#include "TauAnalysis/RecoTools/bin/fitZllRecoilCorrectionAuxFunctions.h"
+
 #include <TFile.h>
 #include <TString.h>
 #include <TObjArray.h>
@@ -11,6 +17,8 @@
 #include <TLegend.h>
 #include <TMath.h>
 #include <TROOT.h>
+#include <TSystem.h>
+#include <TBenchmark.h>
 
 #include <string>
 #include <map>
@@ -63,25 +71,27 @@ TH1* getHistogram(TFile* inputFile, const TString& dqmDirectory, const TString& 
   histogramName.Append(meName);
 
   TH1* histogram = (TH1*)inputFile->Get(histogramName.Data());
-  //std::cout << "histogramName = " << histogramName.Data() << ": histogram = " << histogram;
-  //if ( histogram ) std::cout << ", integral = " << histogram->Integral();
-  //std::cout << std::endl; 
+  if ( !histogram ) {
+    std::cout << "histogramName = " << histogramName.Data() << ": histogram = " << histogram;
+    if ( histogram ) std::cout << ", integral = " << histogram->Integral();
+    std::cout << std::endl; 
+  }
+  assert(histogram);
 
   if ( !histogram->GetSumw2N() ) histogram->Sumw2();
 
   return histogram;
 }
 
-double square(double x)
-{
-  return x*x;
-}
-
 TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile, 
 					  TObjArray& processes, const std::string& central_or_shift,
 					  const TString& data_or_mcType, const TString& runPeriod, const TString& projection,
-					  double p0, double p1, double p2)
+					  double p0, double p1, double p2,
+					  bool divide_by_response)
 {
+  std::cout << "<compMEtResolution_vs_PileUp>:" << std::endl;
+  std::cout << " " << data_or_mcType.Data() << " " << runPeriod.Data() << " " << projection.Data() << std::endl;
+
   int numVertices = 0;
   if      ( std::string(runPeriod.Data()) == "2011runA" ) numVertices = 24;
   else if ( std::string(runPeriod.Data()) == "2011runB" ) numVertices = 24;
@@ -92,7 +102,12 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile,
 
   for ( int iVertex = 1; iVertex <= numVertices; ++iVertex ) {
 
-    TH2* histogram_sum = 0;
+    if ( std::string(inputFile->GetName()).find("MVA") != std::string::npos && iVertex > 20 ) continue; // CV: exclude "bad" points 
+                                                                                                        //     from resolution fit
+
+    TH1* histogram_qT_sum = 0;
+    TH2* histogram_uParl_vs_qT_sum = 0;
+    TH2* histogram_projection_vs_qT_sum = 0;
   
     int numProcesses = processes.GetEntries();
     for ( int iProcess = 0; iProcess < numProcesses; ++iProcess ) {
@@ -100,45 +115,116 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile,
       
       TString dqmDirectory = process->GetString();
       if ( central_or_shift != "central" ) dqmDirectory.Append("/").Append(central_or_shift.data());
-      TString histogramName_process = Form("%sVsQtNumVerticesEq%i", projection.Data(), iVertex);
-      TH2* histogram_process = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, histogramName_process));
-
-      if ( histogram_sum ) {
-	histogram_sum->Add(histogram_process);
+      
+      TString histogramName_uParl_vs_qT_process = Form("uParlVsQtNumVerticesEq%i", iVertex);
+      TH2* histogram_uParl_vs_qT_process = 
+	dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, histogramName_uParl_vs_qT_process));
+      if ( histogram_uParl_vs_qT_sum ) {
+	histogram_uParl_vs_qT_sum->Add(histogram_uParl_vs_qT_process);
       } else {
-	histogram_sum = (TH2*)histogram_process->Clone(TString(histogram_process->GetName()).Append("sum"));
+	histogram_uParl_vs_qT_sum = (TH2*)histogram_uParl_vs_qT_process->Clone(
+          TString(histogram_uParl_vs_qT_process->GetName()).Append("sum"));
       }
+
+      TString histogramName_projection_vs_qT_process = Form("%sVsQtNumVerticesEq%i", projection.Data(), iVertex);
+      TH2* histogram_projection_vs_qT_process = 
+	dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, histogramName_projection_vs_qT_process));
+      if ( histogram_projection_vs_qT_sum ) {
+	histogram_projection_vs_qT_sum->Add(histogram_projection_vs_qT_process);
+      } else {
+	histogram_projection_vs_qT_sum = (TH2*)histogram_projection_vs_qT_process->Clone(
+          TString(histogram_projection_vs_qT_process->GetName()).Append("sum"));
+      }
+
+      TString histogramName_qT_process = Form("qTNumVerticesEq%i", iVertex);
+      TH1* histogram_qT_process = 
+	getHistogram(inputFile, dqmDirectory, histogramName_qT_process);
+      if ( histogram_qT_sum ) {
+	histogram_qT_sum->Add(histogram_qT_process);
+      } else {
+	histogram_qT_sum = (TH1*)histogram_qT_process->Clone(
+          TString(histogram_qT_process->GetName()).Append("sum"));
+      }           
     }
 
-    TString histogramName_1d = Form("%s_1d", histogram_sum->GetName());
-    TH1* histogram_1d = new TH1D(histogramName_1d.Data(), histogramName_1d.Data(), 75, -75., +75.);
-    if ( !histogram_1d->GetSumw2N() ) histogram_1d->Sumw2();
+    if ( !(histogram_qT_sum->GetEntries() > 1.e+3) ) continue;
 
-    int numBinsX = histogram_sum->GetNbinsX();
+    TGraphAsymmErrors* graph_uParl_vs_qT_mean = 
+      makeGraph_mean_or_rms("graph_uParl_mean", 
+			    "graph_uParl_mean", histogram_uParl_vs_qT_sum, histogram_qT_sum, kMean);
+
+    TF1* fit_response = fitGraph_uParl_mean("fit_response", graph_uParl_vs_qT_mean);
+
+    double resolution_div_response_mean = 0.;
+    double resolution_div_response_meanErr = 0.;
+    double normalization = 0.;
+
+    int numBinsX = histogram_projection_vs_qT_sum->GetNbinsX();
     for ( int iBinX = 1; iBinX <= numBinsX; ++iBinX ) {
-      TString histogramName_sliceX = Form("%s_sliceX%i", histogram_sum->GetName(), iBinX);
-      TH1* histogram_sliceX = histogram_sum->ProjectionY(histogramName_sliceX.Data(), iBinX, iBinX, "e");
+      double x = histogram_projection_vs_qT_sum->GetXaxis()->GetBinCenter(iBinX);
 
-      int numBinsY = histogram_sum->GetNbinsY();
+      double qTmin = histogram_projection_vs_qT_sum->GetXaxis()->GetBinLowEdge(iBinX);
+      double qTmax = histogram_projection_vs_qT_sum->GetXaxis()->GetBinUpEdge(iBinX);
+
+      int binLowIndex = histogram_qT_sum->FindBin(qTmin);
+      int binUpIndex  = histogram_qT_sum->FindBin(qTmax);
+      histogram_qT_sum->GetXaxis()->SetRange(binLowIndex, binUpIndex);
+      if ( !(histogram_qT_sum->Integral(qTmin, qTmax) > 10. && histogram_qT_sum->GetMean() > 0.) ) continue;
+
+      double response = -fit_response->Eval(x)/x;
+      double responseErr = getFitError(fit_response, x)/x;
+      if ( !(response > 0.) ) continue;
+
+      double rms = 0.;
+      double rmsErr = 0.;
+      double weight_sum = 0.;
+
+      int numBinsY = histogram_projection_vs_qT_sum->GetNbinsY();
       for ( int iBinY = 1; iBinY <= numBinsY; ++iBinY ) {
-	double y = histogram_sum->GetYaxis()->GetBinCenter(iBinY);
+	double y = histogram_projection_vs_qT_sum->GetYaxis()->GetBinCenter(iBinY);
+	
+	double y_expected = 0.;
+	if      ( projection == "uParl" ) y_expected = -response*x;
+	else if ( projection == "uPerp" ) y_expected = 0.;
+	else assert(0);
 
-	double diff_y = y - histogram_sliceX->GetMean();
+	double diff_y = y - y_expected;
+	
+	double weight = histogram_projection_vs_qT_sum->GetBinContent(iBinX, iBinY);
+	double weightErr = histogram_projection_vs_qT_sum->GetBinError(iBinX, iBinY);
 
-	int bin_1d = histogram_1d->FindBin(diff_y);
-
-	double binContent_1d = histogram_1d->GetBinContent(bin_1d);
-	double binError_1d = histogram_1d->GetBinError(bin_1d);
-
-	double addBinContent = histogram_sum->GetBinContent(iBinX, iBinY);
-	double addBinError = histogram_sum->GetBinError(iBinX, iBinY);
-
-	histogram_1d->SetBinContent(bin_1d, binContent_1d + addBinContent);
-	histogram_1d->SetBinError(bin_1d, TMath::Sqrt(binError_1d*binError_1d + addBinError*addBinError));
+	rms += (weight*square(diff_y));
+	rmsErr += (weightErr*square(diff_y));
+	weight_sum += weight;
       }
 
-      delete histogram_sliceX;
+      if ( weight_sum > 0. ) {
+	rms /= weight_sum;
+	rmsErr /= weight_sum;
+      }
+
+      double resolution = TMath::Sqrt(rms);
+      double resolutionErr = TMath::Sqrt(rmsErr);
+
+      std::cout << "qT = " << qTmin << ".." << qTmax << " (weight_sum = " << weight_sum << "):" << std::endl;
+      std::cout << " response = " << response << " +/- " << responseErr << std::endl;
+      std::cout << " resolution = " << resolution << " +/- " << resolutionErr << std::endl;
+      
+      if ( divide_by_response ) resolution_div_response_mean += weight_sum*(resolution/response);
+      else resolution_div_response_mean += weight_sum*resolution;
+      double err2 = 0.;
+      if ( divide_by_response && response > 0. ) err2 += square(responseErr/response);
+      if ( resolution > 0. ) err2 += square(resolutionErr/resolution);
+      resolution_div_response_meanErr += weight_sum*TMath::Sqrt(err2);
+      normalization += weight_sum;
     }
+      
+    if ( normalization > 0. ) {
+      resolution_div_response_mean /= normalization;
+      resolution_div_response_meanErr /= normalization;
+    }
+    
+    std::cout << "resolution/response = " << resolution_div_response_mean << " +/- " << resolution_div_response_meanErr << std::endl;
 
     double x = -1.;
     if ( xAxis_mode == kGenNumPileUpInteractions ) {
@@ -155,13 +241,18 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile,
     if ( x < 0. ) continue;
     //std::cout << "p0 = " << p0 << ", p1 = " << p1 << ", p2 = " << p2 << ":" 
     //	        << " numVtx = " << iVertex << " --> numPU = " << x << std::endl;
-    double y = histogram_1d->GetRMS();
-    double yErr = histogram_1d->GetRMSError();
+    double y = resolution_div_response_mean;
+    double yErr = 2.*resolution_div_response_meanErr;
     
-    graph->SetPoint(iVertex - 1, x, y);
-    graph->SetPointError(iVertex - 1, 0., yErr);
+    std::cout << "x = " << x << ": y = " << y << " +/- " << yErr << std::endl;
 
-    delete histogram_1d;
+    if ( y > 5. ) { // CV: reject "bad" points
+      graph->SetPoint(iVertex - 1, x, y);
+      graph->SetPointError(iVertex - 1, 0., yErr);
+    }
+
+    delete graph_uParl_vs_qT_mean;
+    delete fit_response;
   }
 
   TString graphName = Form("graph_%s_%s_%s", data_or_mcType.Data(), runPeriod.Data(), projection.Data());
@@ -171,7 +262,8 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile,
 }
 
 TGraphErrors* compMEtResolution_vs_PileUp_data(TFile* inputFile, 
-					       const std::string& central_or_shift, const TString& runPeriod, const TString& projection)
+					       const std::string& central_or_shift, const TString& runPeriod, const TString& projection,
+					       bool divide_by_response)
 {
   TObjArray processes;
   processes.Add(new TObjString("Data"));
@@ -187,16 +279,17 @@ TGraphErrors* compMEtResolution_vs_PileUp_data(TFile* inputFile,
   std::string central_or_shift_mod = ( central_or_shift.find("vertexRecoEff") == std::string::npos ) ?
     central_or_shift : "central";
   TGraphErrors* graph = compMEtResolution_vs_PileUp(inputFile, processes, central_or_shift_mod , 
-						    "data", runPeriod, projection, p0, p1, p2);
+						    "data", runPeriod, projection, p0, p1, p2, divide_by_response);
   if ( central_or_shift != "central" ) graph->SetName(Form("%s_%s", graph->GetName(), central_or_shift.data()));
   return graph;
 }
 
 TGraphErrors* compMEtResolution_vs_PileUp_mc(TFile* inputFile, const std::string& central_or_shift,
-					     const TString& runPeriod, const TString& projection)
+					     const TString& runPeriod, const TString& projection,
+					     bool divide_by_response)
 {
   TObjArray processes;
-  processes.Add(new TObjString("ZplusJets_madgraph"));
+  processes.Add(new TObjString("ZplusJets_madgraph2"));
   //processes.Add(new TObjString("simTTplusJets"));
   //processes.Add(new TObjString("simWW"));
   //processes.Add(new TObjString("simWZ"));
@@ -214,7 +307,7 @@ TGraphErrors* compMEtResolution_vs_PileUp_mc(TFile* inputFile, const std::string
   std::string central_or_shift_mod = ( central_or_shift.find("vertexRecoEff") == std::string::npos ) ?
     central_or_shift : "central";
   TGraphErrors* graph = compMEtResolution_vs_PileUp(inputFile, processes, central_or_shift_mod , 
-						    "mc", runPeriod, projection, p0, p1, p2);
+						    "mc", runPeriod, projection, p0, p1, p2, divide_by_response);
   if ( central_or_shift != "central" ) graph->SetName(Form("%s_%s", graph->GetName(), central_or_shift.data()));
   return graph;
 }
@@ -251,23 +344,60 @@ void cloneStyleOptions_graph(TGraph* graph, const TGraph* graph_ref)
 
 TGraphErrors* makeGraph_data_div_mc(TGraphErrors* graph_data, TGraphErrors* graph_mc)
 {
-  assert(graph_data->GetN() == graph_mc->GetN());
-
-  int numPoints = graph_data->GetN();
+  TGraphErrors* graph_ref = 0;
+  int numPoints_data = graph_data->GetN();
+  int numPoints_mc = graph_mc->GetN();
+  if ( numPoints_mc < numPoints_data ) {
+    graph_ref = graph_mc;
+  } else {
+    graph_ref = graph_data;
+  }
+  int numPoints = graph_ref->GetN();
 
   TGraphErrors* graph_diff = new TGraphErrors(numPoints);
   
   for ( int iPoint = 0; iPoint < numPoints; ++iPoint ) {
+    double x_ref, y_ref;
+    graph_ref->GetPoint(iPoint, x_ref, y_ref);
+    //std::cout << "x_ref  = " << x_ref << std::endl;
+
+    int iPoint_data = -1;
+    double dxMin_data = 1.e+3;
+    for ( int iPoint_test = 0; iPoint_test < numPoints_data; ++iPoint_test ) {
+      double x_test, y_test;
+      graph_data->GetPoint(iPoint_test, x_test, y_test);
+      //std::cout << "x_test(data) = " << x_test << std::endl;
+      double dx = TMath::Abs(x_test - x_ref);
+      if ( dx < dxMin_data ) {
+	iPoint_data = iPoint_test;
+	dxMin_data = dx;
+      }
+    }
+    assert(iPoint_data >= 0);
     double x_data, y_data;
-    graph_data->GetPoint(iPoint, x_data, y_data);
-    double xErr_data = graph_data->GetErrorX(iPoint);
-    double yErr_data = graph_data->GetErrorY(iPoint);
+    graph_data->GetPoint(iPoint_data, x_data, y_data);
+    double xErr_data = graph_data->GetErrorX(iPoint_data);
+    double yErr_data = graph_data->GetErrorY(iPoint_data);
     
+    int iPoint_mc = -1;
+    double dxMin_mc = 1.e+3;
+    for ( int iPoint_test = 0; iPoint_test < numPoints_mc; ++iPoint_test ) {
+      double x_test, y_test;
+      graph_mc->GetPoint(iPoint_test, x_test, y_test);
+      //std::cout << "x_test(mc) = " << x_test << std::endl;
+      double dx = TMath::Abs(x_test - x_ref);
+      if ( dx < dxMin_mc ) {
+	iPoint_mc = iPoint_test;
+	dxMin_mc = dx;
+      }
+    }
+    assert(iPoint_mc >= 0);
     double x_mc, y_mc;
-    graph_mc->GetPoint(iPoint, x_mc, y_mc);
-    assert(x_mc == x_data);
-    double xErr_mc = graph_mc->GetErrorX(iPoint);
-    double yErr_mc = graph_mc->GetErrorY(iPoint);
+    graph_mc->GetPoint(iPoint_mc, x_mc, y_mc);
+    double xErr_mc = graph_mc->GetErrorX(iPoint_mc);
+    double yErr_mc = graph_mc->GetErrorY(iPoint_mc);
+
+    if ( TMath::Nint(x_data - x_mc) > 0 ) continue;
     
     double y_diff = (y_data - y_mc)/y_mc;
     //std::cout << "x = " << x_data << ": y(data) = " << y_data << ", y(mc) = " << y_mc << " --> dy = " << y_diff << std::endl;
@@ -318,33 +448,34 @@ TF1* makeFit_data_div_mc(TF1* fit_data, TF1* fit_mc)
 void makeMEtResolution_vs_PileUpPlot(const TString& metType, 
 				     const TString& projection, const TString& yAxisTitle,
 				     TFile* inputFile1, const TString& runPeriod1, const TString& legendEntry1,
-				     TFile* inputFile2, const TString& runPeriod2, const TString& legendEntry2)
+				     TFile* inputFile2, const TString& runPeriod2, const TString& legendEntry2,
+				     bool divide_by_response)
 {
   TGraphErrors* graph1_data = 0;
   TF1* fit1_data = 0;
   if ( draw1_data ) {
-    graph1_data = compMEtResolution_vs_PileUp_data(inputFile1, "central", runPeriod1.Data(), projection);
+    graph1_data = compMEtResolution_vs_PileUp_data(inputFile1, "central", runPeriod1.Data(), projection, divide_by_response);
     fit1_data = fitMEtResolution_vs_PileUp(graph1_data, runPeriod1);
   }
 
   TGraphErrors* graph1_mc = 0;
   TF1* fit1_mc = 0;
   if ( draw1_mc ) {
-    graph1_mc = compMEtResolution_vs_PileUp_mc(inputFile1, "central", runPeriod1.Data(), projection);
+    graph1_mc = compMEtResolution_vs_PileUp_mc(inputFile1, "central", runPeriod1.Data(), projection, divide_by_response);
     fit1_mc = fitMEtResolution_vs_PileUp(graph1_mc, runPeriod1);
   }
 
   TGraphErrors* graph2_data = 0;
   TF1* fit2_data = 0;
   if ( draw2_data ) {
-    graph2_data = compMEtResolution_vs_PileUp_data(inputFile2, "central", runPeriod2.Data(), projection);
+    graph2_data = compMEtResolution_vs_PileUp_data(inputFile2, "central", runPeriod2.Data(), projection, divide_by_response);
     fit2_data = fitMEtResolution_vs_PileUp(graph2_data, runPeriod2);
   }
 
   TGraphErrors* graph2_mc = 0;
   TF1* fit2_mc = 0;
   if ( draw2_mc ) {
-    graph2_mc = compMEtResolution_vs_PileUp_mc(inputFile2, "central", runPeriod2.Data(), projection);
+    graph2_mc = compMEtResolution_vs_PileUp_mc(inputFile2, "central", runPeriod2.Data(), projection, divide_by_response);
     fit2_mc = fitMEtResolution_vs_PileUp(graph2_mc, runPeriod2);
   }
 
@@ -531,6 +662,7 @@ void makeMEtResolution_vs_PileUpPlot(const TString& metType,
   std::string outputFileName = Form("metResolution_vs_PileUp_%s_%s.eps", metType.Data(), projection.Data());
   size_t idx = outputFileName.find_last_of('.');
   std::string outputFileName_plot = std::string(outputFileName, 0, idx);
+  if ( divide_by_response ) outputFileName_plot.append("_div_response");
   if ( idx != std::string::npos ) canvas->Print(std::string(outputFileName_plot).append(std::string(outputFileName, idx)).data());
   canvas->Print(std::string(outputFileName_plot).append(".png").data());
   canvas->Print(std::string(outputFileName_plot).append(".pdf").data());
@@ -573,14 +705,14 @@ void compErr(std::map<std::string, double>& p, double p_central_value, double pE
   errDown = TMath::Sqrt(errDown2);
 }
 
-typedef TGraphErrors* (compMEtResolution_function)(TFile*, const std::string&, const TString&, const TString&);
+typedef TGraphErrors* (compMEtResolution_function)(TFile*, const std::string&, const TString&, const TString&, bool);
 
 void computeSysUncertainties(const TString& projection,
 			     TFile* inputFile, compMEtResolution_function* f, 
 			     const TString& runPeriod, TObjArray& sysUncertainties,
 			     valueMap3& resolution)
 {
-  TGraphErrors* graph_central_value = (*f)(inputFile, "central", runPeriod, projection);
+  TGraphErrors* graph_central_value = (*f)(inputFile, "central", runPeriod, projection, false);
   TF1* fit_central_value = fitMEtResolution_vs_PileUp(graph_central_value, runPeriod);	  
 						
   double p0_central_value    = fit_central_value->GetParameter(0);
@@ -597,7 +729,7 @@ void computeSysUncertainties(const TString& projection,
   int numSysUncertainties = sysUncertainties.GetEntries();
   for ( int iSysUncertainty = 0; iSysUncertainty < numSysUncertainties; ++iSysUncertainty ) {
     TObjString* sysUncertainty = dynamic_cast<TObjString*>(sysUncertainties.At(iSysUncertainty));
-    TGraphErrors* graph_i = (*f)(inputFile, sysUncertainty->GetString().Data(), runPeriod, projection);
+    TGraphErrors* graph_i = (*f)(inputFile, sysUncertainty->GetString().Data(), runPeriod, projection, false);
     TF1* fit_i = fitMEtResolution_vs_PileUp(graph_i, runPeriod);
     p0[sysUncertainty->GetString().Data()] = fit_i->GetParameter(0);
     p1[sysUncertainty->GetString().Data()] = fit_i->GetParameter(1);
@@ -666,21 +798,31 @@ void printResolutionTable(std::ofstream& table,
   table << "\\hline" << std::endl;
 }
 
-void makeMEtResolution_vs_PileUpPlots()
+int main(int argc, const char* argv[])
 {
+  std::cout << "<makeMEtResolution_vs_PileUpPlots>:" << std::endl;  
+
 //--- stop ROOT from keeping references to all histograms
   TH1::AddDirectory(false);
 
-//--- suppress the output canvas 
+//--- disable pop-up windows showing graphics output
   gROOT->SetBatch(true);
 
-  TString inputFilePath1 = "/data1/veelken/tmp/ZllRecoilCorrection/v5_12_1/2012RunA/";
+//--- load framework libraries
+  gSystem->Load("libFWCoreFWLite");
+  AutoLibraryLoader::enable();
+
+//--- keep track of time it takes the macro to execute
+  TBenchmark clock;
+  clock.Start("makeMEtResolution_vs_PileUpPlots");
+
+  TString inputFilePath1 = "/data1/veelken/tmp/ZllRecoilCorrection/v5_19_woMEtSysShiftCorr/2012RunA/";
   TString inputFileName1 = "analyzeZllRecoilCorrectionHistograms_all_pfMEtTypeIcorrectedSmeared.root";
   TString legendEntry1   = "corr. PFMEt";
   TString runPeriod1     = "2012runA";
 
-  TString inputFilePath2 = "/data1/veelken/tmp/ZllRecoilCorrection/v5_12_1/2012RunA/";
-  TString inputFileName2 = "analyzeZllRecoilCorrectionHistograms_all_pfMEtByPhilsMVA.root";
+  TString inputFilePath2 = "/data1/veelken/tmp/ZllRecoilCorrection/v5_19_woMEtSysShiftCorr/2012RunA/";
+  TString inputFileName2 = "analyzeZllRecoilCorrectionHistograms_all_pfMEtMVA.root";
   TString legendEntry2   = "MVA MEt";
   TString runPeriod2     = "2012runA";
 
@@ -695,11 +837,19 @@ void makeMEtResolution_vs_PileUpPlots()
   makeMEtResolution_vs_PileUpPlot("pfMEtType1corr_vs_mvaMEt", 
 				  "uParl", "RMS(u_{#parallel} ) / GeV", 
 				  inputFile1, runPeriod1, legendEntry1,
-				  inputFile2, runPeriod2, legendEntry2);
+				  inputFile2, runPeriod2, legendEntry2, false);
+  makeMEtResolution_vs_PileUpPlot("pfMEtType1corr_vs_mvaMEt", 
+				  "uParl", "RMS(u_{#parallel} ) / (<-u_{#parallel} >/{q_T}) #cdot GeV", 
+				  inputFile1, runPeriod1, legendEntry1,
+				  inputFile2, runPeriod2, legendEntry2, true);
   makeMEtResolution_vs_PileUpPlot("pfMEtType1corr_vs_mvaMEt", 
 				  "uPerp", "RMS(u_{#perp}  ) / GeV", 
 				  inputFile1, runPeriod1, legendEntry1,
-				  inputFile2, runPeriod2, legendEntry2);
+				  inputFile2, runPeriod2, legendEntry2, false);
+  makeMEtResolution_vs_PileUpPlot("pfMEtType1corr_vs_mvaMEt", 
+				  "uPerp", "RMS(u_{#perp}  ) / (<-u_{#parallel} >/{q_T}) #cdot GeV", 
+				  inputFile1, runPeriod1, legendEntry1,
+				  inputFile2, runPeriod2, legendEntry2, true);
 
   if ( compute_uncertainties ) {
     TObjArray sysUncertainties_data;
@@ -753,7 +903,7 @@ void makeMEtResolution_vs_PileUpPlots()
     std::cout << "computing uncertainties on uParl, Monte Carlo (1):" << std::endl;
     computeSysUncertainties("uParl", inputFile1, 
 			    &compMEtResolution_vs_PileUp_mc,
-			    runPeriod1, sysUncertainties_mc, resolution1_mc);
+			    runPeriod1, sysUncertainties_mc, resolution1_mc);    
     std::cout << "computing uncertainties on uPerp, Monte Carlo (1):" << std::endl;
     computeSysUncertainties("uPerp", inputFile1, 
 			    &compMEtResolution_vs_PileUp_mc,
@@ -778,4 +928,10 @@ void makeMEtResolution_vs_PileUpPlots()
 
   delete inputFile1;
   delete inputFile2;
+
+//--print time that it took macro to run
+  std::cout << "finished executing makeMEtResolution_vs_PileUpPlots macro:" << std::endl;
+  clock.Show("makeMEtResolution_vs_PileUpPlots");
+
+  return 0;
 }
