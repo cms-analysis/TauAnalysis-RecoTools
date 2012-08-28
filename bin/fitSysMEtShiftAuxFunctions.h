@@ -1,5 +1,6 @@
+#ifndef TauAnalysis_TauIdEfficiency_fitSysMEtShiftAuxFunctions_h
+#define TauAnalysis_TauIdEfficiency_fitSysMEtShiftAuxFunctions_h
 
-#include <TFile.h>
 #include <TString.h>
 #include <TH1.h>
 #include <TH2.h>
@@ -7,38 +8,13 @@
 #include <TF1.h>
 #include <TCanvas.h>
 #include <TLegend.h>
-#include <TMath.h>
-#include <TROOT.h>
 #include <TPaveText.h>
 
+#include <vector>
 #include <string>
-#include <iostream>
-#include <iomanip>
 #include <assert.h>
 
-TH1* getHistogram(TFile* inputFile, const TString& dqmDirectory, const TString& meName)
-{  
-  //std::cout << "inputFile = " << inputFile->GetName() << std::endl;
-
-  TString histogramName = TString(dqmDirectory);
-  if ( !histogramName.EndsWith("/") ) histogramName.Append("/");
-  histogramName.Append(meName);
-
-  TH1* histogram = (TH1*)inputFile->Get(histogramName.Data());
-  //std::cout << "histogramName = " << histogramName.Data() << ": histogram = " << histogram;
-  //if ( histogram ) std::cout << ", integral = " << histogram->Integral();
-  //std::cout << std::endl; 
-
-  if ( histogram && !histogram->GetSumw2N() ) histogram->Sumw2();
-  else if ( !histogram) 
-    std::cerr << "Failed to load histogram = " << histogramName << " from file = " << inputFile->GetName() << " !!" << std::endl;
-
-  if ( histogram->Integral() > 0. ) histogram->Scale(histogram->GetEntries()/histogram->Integral());
-
-  return histogram;
-}
-
-void fitMETxyVsSumEt(const TH2* histogram2d, double xMin, double xMax, double xSeparationMin,
+TF1* fitMETxyVsSumEt(const TH2* histogram2d, double xMin, double xMax, double xSeparationMin,
 		     const TString& fitVariable, const TString& xAxisTitle, const TString& yAxisTitle, 
 		     const std::string& outputFileName)
 {
@@ -59,11 +35,14 @@ void fitMETxyVsSumEt(const TH2* histogram2d, double xMin, double xMax, double xS
     TAxis* xAxis = histogram2d->GetXaxis();
     double x = xAxis->GetBinCenter(iBin2dX);
     double xErr = 0.5*xAxis->GetBinWidth(iBin2dX);
+    //std::cout << "x = " << x << " +/- " << xErr << std::endl;
     
     if ( !(x > xMin && x < xMax) ) continue;
 
     std::string histogram1dName = std::string(histogram2d->GetName()).append(Form("BinX%i", iBin2dX));
     TH1* histogram1d = histogram2d->ProjectionY(histogram1dName.data(), iBin2dX, iBin2dX, "e");
+    //std::cout << "histogram1d: integral = " << histogram1d->Integral() 
+    //	        << " (entries = " << histogram1d->GetEntries() << ")" << std::endl;
 
     if ( integralSum > 1.e+3 && (xMax_bin - xMin_bin) >= xSeparationMin ) {
       double graph_x = xSum/integralSum;
@@ -103,6 +82,7 @@ void fitMETxyVsSumEt(const TH2* histogram2d, double xMin, double xMax, double xS
   delete histogram1dSum;
 
   size_t numPoints = graph_xs.size();
+  std::cout << "numPoints = " << numPoints << std::endl;
   assert(graph_xErrsUp.size()   == numPoints);
   assert(graph_xErrsDown.size() == numPoints);
   assert(graph_ys.size()        == numPoints);
@@ -122,7 +102,8 @@ void fitMETxyVsSumEt(const TH2* histogram2d, double xMin, double xMax, double xS
 
   double xMin_fit = histogram2d->GetXaxis()->GetXmin();
   double xMax_fit = histogram2d->GetXaxis()->GetXmax();
-  TF1* fitFunction = new TF1("fitFunction", "[0] + [1]*x", xMin_fit, xMax_fit);
+  std::string fitFunctionName = Form("%s_fit", histogram2d->GetName());
+  TF1* fitFunction = new TF1(fitFunctionName.data(), "[0] + [1]*x", xMin_fit, xMax_fit);
   graph->Fit(fitFunction, "0");
 
   double yMin = +1.e+6;
@@ -202,60 +183,9 @@ void fitMETxyVsSumEt(const TH2* histogram2d, double xMin, double xMax, double xS
   
   delete dummyHistogram;
   delete canvas;
-  delete fitFunction;
   delete graph;
+
+  return fitFunction;
 }
 
-void fitSysMEtShift()
-{
-  std::string sample = "Data";
-  //std::string sample = "ZplusJets_madgraph2";
-
-  std::string runPeriod = "2012RunA";
-
-  std::string inputFilePath;
-  if      ( runPeriod == "2012RunA" ) inputFilePath = "/data1/veelken/tmp/ZllRecoilCorrection/v5_19_woMEtSysShiftCorr/2012RunA";
-  else assert(0);
-
-  std::string inputFileName;
-  if      ( sample == "Data"                ) inputFileName = "analyzeZllRecoilCorrectionHistograms_Data_pfMEtTypeIcorrectedSmeared_central.root";
-  else if ( sample == "ZplusJets_madgraph2" ) inputFileName = "analyzeZllRecoilCorrectionHistograms_ZplusJets_madgraph2_pfMEtTypeIcorrectedSmeared_central.root";
-
-  TString inputFileName_full = inputFilePath.data();
-  if ( !inputFileName_full.EndsWith("/") ) inputFileName_full.Append("/");
-  inputFileName_full.Append(inputFileName.data());
-
-  TFile* inputFile = new TFile(inputFileName_full.Data());
-
-  gROOT->SetBatch(true);
-
-  TString dqmDirectory = Form("%s/beforeAddPUreweight/", sample.data());
-
-  TString meNameMETxVsSumEt = "metXvsSumEt";
-  TH2* histogramMETxVsSumEt = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, meNameMETxVsSumEt));
-  TString meNameMETyVsSumEt = "metYvsSumEt";
-  TH2* histogramMETyVsSumEt = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, meNameMETyVsSumEt));
-
-  std::cout << "running PFMET sys. Shift fits vs. sumEt... (sample = " << sample << ")" << std::endl;
-  std::string outputFileNameMETxVsSumEt = Form("plots/sysMETxShiftVsSumEt_%s_%s.eps", sample.data(), runPeriod.data());
-  fitMETxyVsSumEt(histogramMETxVsSumEt, 120., 800., 5., 
-		  "#Sigma E_{T}", "#Sigma E_{T} / GeV", "<E_{x}^{miss}> / GeV", outputFileNameMETxVsSumEt);
-  std::string outputFileNameMETyVsSumEt = Form("plots/sysMETyShiftVsSumEt_%s_%s.eps", sample.data(), runPeriod.data());
-  fitMETxyVsSumEt(histogramMETyVsSumEt, 120., 800., 5.,
-		  "#Sigma E_{T}", "#Sigma E_{T} / GeV", "<E_{y}^{miss}> / GeV", outputFileNameMETyVsSumEt);
-
-  TString meNameMETxVsNumVertices = "metXvsNumVertices";
-  TH2* histogramMETxVsNumVertices = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, meNameMETxVsNumVertices));
-  TString meNameMETyVsNumVertices = "metYvsNumVertices";
-  TH2* histogramMETyVsNumVertices = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectory, meNameMETyVsNumVertices));
-
-  std::cout << "running PFMET sys. Shift fits vs. Nvtx... (sample = " << sample << ")" << std::endl;
-  std::string outputFileNameMETxVsNumVertices = Form("plots/sysMETxShiftVsNumVertices_%s_%s.eps", sample.data(), runPeriod.data());
-  fitMETxyVsSumEt(histogramMETxVsNumVertices, 0., 25., 0.5,
-		  "N_{vtx}", "N_{vtx}", "<E_{x}^{miss}> / GeV", outputFileNameMETxVsNumVertices);
-  std::string outputFileNameMETyVsNumVertices = Form("plots/sysMETyShiftVsNumVertices_%s_%s.eps", sample.data(), runPeriod.data());
-  fitMETxyVsSumEt(histogramMETyVsNumVertices, 0., 25., 0.5, 
-		  "N_{vtx}", "N_{vtx}", "<E_{y}^{miss}> / GeV", outputFileNameMETyVsNumVertices);
- 
-  delete inputFile;
-}
+#endif
