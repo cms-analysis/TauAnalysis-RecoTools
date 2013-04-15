@@ -1,13 +1,12 @@
-
 /** \executable FWLiteUnclusteredEnergyAnalyzer
  *
  * Determine data/MC residual corrections to "unclustered energy
  *
  * \author Christian Veelken, LLR
  *
- * \version $Revision: 1.13 $
+ * \version $Revision: 1.1 $
  *
- * $Id: FWLiteUnclusteredEnergyAnalyzer.cc,v 1.13 2012/08/28 15:01:36 veelken Exp $
+ * $Id: FWLiteUnclusteredEnergyAnalyzer.cc,v 1.1 2013/04/14 11:56:32 veelken Exp $
  *
  */
 
@@ -23,6 +22,10 @@
 #include "DataFormats/FWLite/interface/OutputFiles.h"
 
 #include "DataFormats/Candidate/interface/Candidate.h"
+
+#include "CondFormats/JetMETObjects/interface/FactorizedJetCorrector.h"
+#include "CondFormats/JetMETObjects/interface/JetCorrectorParameters.h"
+#include "JetMETCorrections/Objects/interface/JetCorrector.h"
 
 #include "TauAnalysis/CandidateTools/interface/candidateAuxFunctions.h"
 
@@ -57,22 +60,14 @@ struct binningEntryType
       subtract_qT_(subtract_qT),
       shiftBy_(shiftBy)
   {
-    //std::cout << "<binningEntryType::binningEntryType>:" << std::endl;
+    //std::cout << "<binningEntryType::initialize>:" << std::endl;
     //std::cout << " binLabel = " << binLabel_ << std::endl;
     tree->SetBranchAddress(Form("%s_%sPx", branchName.data(), binLabel_.data()), &sumPx_);
     tree->SetBranchAddress(Form("%s_%sPy", branchName.data(), binLabel_.data()), &sumPy_);
     tree->SetBranchAddress(Form("%s_%sSumEt", branchName.data(), binLabel_.data()), &sumEt_);
-    std::string histogramName_metParl_vs_qT = Form("metParl_vs_qT_%s", binLabel_.data());
-    histogram_metParl_vs_qT_ = dir.make<TH2D>(histogramName_metParl_vs_qT.data(), histogramName_metParl_vs_qT.data(), 300, 0., 300., 500, -400., +100.);
-    std::string histogramName_metParl_vs_uParl = Form("metParl_vs_uParl_%s", binLabel_.data());
-    histogram_metParl_vs_uParl_ = dir.make<TH2D>(histogramName_metParl_vs_uParl.data(), histogramName_metParl_vs_uParl.data(), 500, -400., +100., 500, -400., +100.);
   }
-  ~binningEntryType() 
-  {
-    //delete histogram_metParl_vs_qT_;
-    //delete histogram_metParl_vs_uParl_;
-  }
-  void update(double qX, double qY, const reco::Candidate::LorentzVector& muPlusP4, const reco::Candidate::LorentzVector& muMinusP4)
+  ~binningEntryType() {}
+  void update(double qX, double qY, const reco::Candidate::LorentzVector& muPlusP4, const reco::Candidate::LorentzVector& muMinusP4, FactorizedJetCorrector* residualCorrector)
   {
     sumPx_corrected_ = sumPx_;
     sumPy_corrected_ = sumPy_;
@@ -89,24 +84,23 @@ struct binningEntryType
 	sumEt_corrected_ -= muMinusP4.pt();
       }      
     }
-    sumPx_corrected_ *= (1. + shiftBy_);
-    sumPy_corrected_ *= (1. + shiftBy_);
-    sumEt_corrected_ *= (1. + shiftBy_);
+    double residualCorrFactor = 1.;
+    if ( residualCorrector ) {
+      residualCorrector->setJetEta(binCenter_);
+      residualCorrector->setJetPt(10.);
+      residualCorrector->setJetA(0.25);
+      residualCorrector->setRho(10.); 
+      residualCorrFactor = residualCorrector->getCorrection();
+      //std::cout << "eta = " << binCenter_ << ": residualCorrFactor = " << residualCorrFactor << std::endl;
+    }
+    sumPx_corrected_ *= ((1. + shiftBy_)*residualCorrFactor);
+    sumPy_corrected_ *= ((1. + shiftBy_)*residualCorrFactor);
+    sumEt_corrected_ *= ((1. + shiftBy_)*residualCorrFactor);
     errorFlag_ = 0;
     std::pair<double, double> uProj = compMEtProjU(qX, qY, -sumPx_corrected_, -sumPy_corrected_, errorFlag_, false);
     if ( errorFlag_ ) return;
     uParl_ = uProj.first;
     uPerp_ = uProj.second;
-  }
-  void fillHistograms(double qX, double qY, double qT, double metX, double metY, double evtWeight) 
-  {
-    int errorFlag = 0;
-    std::pair<double, double> metProj = compMEtProjU(qX, qY, metX, metY, errorFlag, false);
-    if ( errorFlag ) return;
-    metParl_ = metProj.first;
-    metPerp_ = metProj.second;
-    histogram_metParl_vs_qT_->Fill(qT, metParl_, evtWeight);
-    histogram_metParl_vs_uParl_->Fill(uParl_, metParl_, evtWeight);
   }
   double uParl() const { return uParl_; }
   double uPerp() const { return uPerp_; }
@@ -132,8 +126,6 @@ struct binningEntryType
   double uPerp_;
   double metParl_;
   double metPerp_;
-  TH2* histogram_metParl_vs_qT_;
-  TH2* histogram_metParl_vs_uParl_;
 };
 
 struct weightEntryType
@@ -227,7 +219,7 @@ int main(int argc, char* argv[])
   double shiftBy = cfgCalibUnclusteredEnergy.getParameter<double>("shiftBy");
 
   vParameterSet cfgBinning = cfgCalibUnclusteredEnergy.getParameter<vParameterSet>("binning");
-
+ 
   std::vector<double> etaBinning;
   for ( vParameterSet::const_iterator cfgBinningEntry = cfgBinning.begin();
 	cfgBinningEntry != cfgBinning.end(); ++cfgBinningEntry ) {
@@ -247,6 +239,7 @@ int main(int argc, char* argv[])
     binningEntryType* binningEntry = new binningEntryType(tree, branchName_unclEnSum, dir, *cfgBinningEntry, subtract_qT, shiftBy);
     binningEntries.push_back(binningEntry);
   }
+
   std::vector<weightEntryType*> weightEntries;
   for ( vstring::const_iterator branchName_weight = branchNames_weights.begin();
 	branchName_weight != branchNames_weights.end(); ++branchName_weight ) {
@@ -269,6 +262,18 @@ int main(int argc, char* argv[])
       throw cms::Exception("FWLiteUnclusteredEnergyAnalyzer") 
 	<< " Failed to load zVtxReweightHistogram = " << zVtxReweightHistogramName.data() << " from file = " << zVtxReweightInputFileName.fullPath().data() << " !!\n";
   }
+
+  FactorizedJetCorrector* residualCorrector = 0;
+  if ( cfgCalibUnclusteredEnergy.exists("residualCorrFileName") ) {
+    edm::FileInPath residualCorrFileName = cfgCalibUnclusteredEnergy.getParameter<edm::FileInPath>("residualCorrFileName");
+    if ( !residualCorrFileName.isLocal()) 
+      throw cms::Exception("FWLiteUnclusteredEnergyAnalyzer") 
+	<< " Failed to find File = " << residualCorrFileName << " !!\n";
+    JetCorrectorParameters residualCorr(residualCorrFileName.fullPath().data());
+    std::vector<JetCorrectorParameters> jetCorrections;
+    jetCorrections.push_back(residualCorr);
+    residualCorrector = new FactorizedJetCorrector(jetCorrections);
+  }
   
   const int qTnumBins = 34;
   double qTbinning[qTnumBins + 1] = { 
@@ -276,18 +281,18 @@ int main(int argc, char* argv[])
     60., 70., 80., 90., 100., 110., 120., 130., 140., 150., 160., 170., 180., 200., 220., 240., 260., 300.
   };
 
-  TH2* histogram_uParl_vs_qT_absZvtxLt5 = dir.make<TH2D>("uParl_vs_qT_absZvtxLt5",   "u_{#parallel} vs q_{T}", qTnumBins, qTbinning, 230, -500.0, +75.0);
-  TH2* histogram_uParlDivQt_vs_qT_absZvtxLt5 = dir.make<TH2D>("uParlDivQt_vs_qT_absZvtxLt5",   "u_{#parallel}/q_{T} vs q_{T}", qTnumBins, qTbinning, 400, -5.0, +5.0);
-  TH1* histogramQt_absZvtxLt5 = dir.make<TH1D>("qT_absZvtxLt5", "q_{T}", 600, 0., 300.);
-  TH2* histogram_uParl_vs_qT_absZvtx5to15 = dir.make<TH2D>("uParl_vs_qT_absZvtx5to15", "u_{#parallel} vs q_{T}", qTnumBins, qTbinning, 230, -500.0, +75.0);
-  TH2* histogram_uParlDivQt_vs_qT_absZvtx5to15 = dir.make<TH2D>("uParlDivQt_vs_qT_absZvtx5to15", "u_{#parallel}/q_{T} vs q_{T}", qTnumBins, qTbinning, 400, -5.0, +5.0);
-  TH1* histogramQt_absZvtx5to15 = dir.make<TH1D>("qT_absZvtx5to15", "q_{T}", 600, 0., 300.);
-  TH2* histogram_uParl_vs_qT_absZvtxGt15 = dir.make<TH2D>("uParl_vs_qT_absZvtxGt15",  "u_{#parallel} vs q_{T}", qTnumBins, qTbinning, 230, -500.0, +75.0);
-  TH2* histogram_uParlDivQt_vs_qT_absZvtxGt15 = dir.make<TH2D>("uParlDivQt_vs_qT_absZvtxGt15",  "u_{#parallel}/q_{T} vs q_{T}", qTnumBins, qTbinning, 400, -5.0, +5.0);
-  TH1* histogramQt_absZvtxGt15 = dir.make<TH1D>("qT_absZvtxGt15", "q_{T}", 600, 0., 300.);
-  TH2* histogram_uParl_vs_qT = dir.make<TH2D>("uParl_vs_qT",  "u_{#parallel} vs q_{T}", qTnumBins, qTbinning, 230, -500.0, +75.0);
-  TH2* histogram_uParlDivQt_vs_qT = dir.make<TH2D>("uParlDivQt_vs_qT",  "u_{#parallel}/q_{T} vs q_{T}", qTnumBins, qTbinning, 400, -5.0, +5.0);
-  TH1* histogramQt = dir.make<TH1D>("qT", "q_{T}", 600, 0., 300.);
+  TH2* histogram_uParl_vs_qT_absZvtxLt5        = dir.make<TH2D>("uParl_vs_qT_absZvtxLt5",        "u_{#parallel} vs q_{T}",       qTnumBins, qTbinning, 230, -500.0, +75.0);
+  TH2* histogram_uParlDivQt_vs_qT_absZvtxLt5   = dir.make<TH2D>("uParlDivQt_vs_qT_absZvtxLt5",   "u_{#parallel}/q_{T} vs q_{T}", qTnumBins, qTbinning, 400,   -5.0,  +5.0);
+  TH1* histogramQt_absZvtxLt5                  = dir.make<TH1D>("qT_absZvtxLt5",                 "q_{T}",                        600, 0., 300.);
+  TH2* histogram_uParl_vs_qT_absZvtx5to15      = dir.make<TH2D>("uParl_vs_qT_absZvtx5to15",      "u_{#parallel} vs q_{T}",       qTnumBins, qTbinning, 230, -500.0, +75.0);
+  TH2* histogram_uParlDivQt_vs_qT_absZvtx5to15 = dir.make<TH2D>("uParlDivQt_vs_qT_absZvtx5to15", "u_{#parallel}/q_{T} vs q_{T}", qTnumBins, qTbinning, 400,   -5.0,  +5.0);
+  TH1* histogramQt_absZvtx5to15                = dir.make<TH1D>("qT_absZvtx5to15",               "q_{T}",                        600, 0., 300.);
+  TH2* histogram_uParl_vs_qT_absZvtxGt15       = dir.make<TH2D>("uParl_vs_qT_absZvtxGt15",       "u_{#parallel} vs q_{T}",       qTnumBins, qTbinning, 230, -500.0, +75.0);
+  TH2* histogram_uParlDivQt_vs_qT_absZvtxGt15  = dir.make<TH2D>("uParlDivQt_vs_qT_absZvtxGt15",  "u_{#parallel}/q_{T} vs q_{T}", qTnumBins, qTbinning, 400,   -5.0,  +5.0);
+  TH1* histogramQt_absZvtxGt15                 = dir.make<TH1D>("qT_absZvtxGt15",                "q_{T}",                        600, 0., 300.);
+  TH2* histogram_uParl_vs_qT                   = dir.make<TH2D>("uParl_vs_qT",                   "u_{#parallel} vs q_{T}",       qTnumBins, qTbinning, 230, -500.0, +75.0);
+  TH2* histogram_uParlDivQt_vs_qT              = dir.make<TH2D>("uParlDivQt_vs_qT",              "u_{#parallel}/q_{T} vs q_{T}", qTnumBins, qTbinning, 400,   -5.0,  +5.0);
+  TH1* histogramQt                             = dir.make<TH1D>("qT",                            "q_{T}",                        600, 0., 300.);
 
   std::vector<double> uParlBinning;
   double uParlMin = -500.0;
@@ -328,9 +333,6 @@ int main(int argc, char* argv[])
   tree->SetBranchAddress(Form("%sPx", branchName_recMuMinus.data()), &muMinusPx);
   tree->SetBranchAddress(Form("%sPy", branchName_recMuMinus.data()), &muMinusPy);
   tree->SetBranchAddress(Form("%sPz", branchName_recMuMinus.data()), &muMinusPz);
-  Float_t metPx, metPy;
-  tree->SetBranchAddress(Form("%sPx", branchName_met.data()), &metPx);
-  tree->SetBranchAddress(Form("%sPy", branchName_met.data()), &metPy);
   Int_t numVertices;
   tree->SetBranchAddress(branchName_numVertices.data(), &numVertices);
   Float_t zVtx;
@@ -341,66 +343,69 @@ int main(int argc, char* argv[])
     if ( iEvent > 0 && (iEvent % 100000) == 0 ) {
       std::cout << "processing Event " << iEvent << std::endl;
     }
+
     tree->GetEntry(iEvent);
+
     //std::cout << " qT = " << qT << " (qX = " << qX << ", qY = " << qY << ")" << std::endl;
+
     reco::Candidate::LorentzVector muPlusP4(muPlusPx, muPlusPy, muPlusPz, muPlusEn);
     reco::Candidate::LorentzVector muMinusP4(muMinusPx, muMinusPy, muMinusPz, muMinusEn);
     for ( std::vector<binningEntryType*>::iterator binningEntry = binningEntries.begin();
 	  binningEntry != binningEntries.end(); ++binningEntry ) {
-      (*binningEntry)->update(qX, qY, muPlusP4, muMinusP4);
+      (*binningEntry)->update(qX, qY, muPlusP4, muMinusP4, residualCorrector);
     }
+
     double metPx_summed = 0.;
     double metPy_summed = 0.;
-    double sumEt_total = 0.;    
-    binningEntryType* binningEntry_maxActivity = 0;
-    double sumEt_maxActivity = 0.;
+    double sumEt_total  = 0.;    
     for ( std::vector<binningEntryType*>::iterator binningEntry = binningEntries.begin();
 	  binningEntry != binningEntries.end(); ++binningEntry ) {
       metPx_summed -= (*binningEntry)->sumPx();
       metPy_summed -= (*binningEntry)->sumPy();
-      sumEt_total += (*binningEntry)->sumEt();
-      if ( (*binningEntry)->sumEt() > sumEt_maxActivity ) {
-	binningEntry_maxActivity = (*binningEntry);
-	sumEt_maxActivity = (*binningEntry)->sumEt();
-      }
+      sumEt_total  += (*binningEntry)->sumEt();
     }
+    metPx_summed -= (muPlusPx + muMinusPx);
+    metPy_summed -= (muPlusPy + muMinusPy);
+    sumEt_total  += (muPlusP4.pt() + muMinusP4.pt());
+
     double evtWeight = 1.0;
     for ( std::vector<weightEntryType*>::const_iterator weightEntry = weightEntries.begin();
 	  weightEntry != weightEntries.end(); ++weightEntry ) {
+      //std::cout << "branchName = " << (*weightEntry)->branchName_ << ": weight = " << (*weightEntry)->weight_ << std::endl;
       evtWeight *= (*weightEntry)->weight_;
     }
     if ( applyZvtxReweight ) {
       int bin = zVtxReweightHistogram->FindBin(zVtx);
       if ( bin <=  1                                 ) bin = 1;
       if ( bin >= zVtxReweightHistogram->GetNbinsX() ) bin = zVtxReweightHistogram->GetNbinsX();
+      //std::cout << "bin = " << bin << ": weight = " << zVtxReweightHistogram->GetBinContent(bin) << std::endl;
       evtWeight *= zVtxReweightHistogram->GetBinContent(bin);
     }
     //std::cout << "evtWeight = " << evtWeight << std::endl;
     if ( evtWeight < 1.e-3 || evtWeight > 1.e+3 ) continue;
-    if ( qT > 10. &&
-	 sumEt_maxActivity > (0.25*sumEt_total) && 
-	 sumEt_maxActivity < (0.75*sumEt_total) ) {      
-      binningEntry_maxActivity->fillHistograms(qX, qY, qT, metPx_summed, metPy_summed, evtWeight);
-      //std::cout << "qT = " << qT << ": uParl = " << binningEntry_maxActivity->uParl() << ", metParl = " << binningEntry_maxActivity->metParl() << std::endl;
-    }
+
     if ( numVertices >= 1 ) {
       int errorFlag = 0;
-      std::pair<double, double> uProj = compMEtProjU(qX, qY, metPx, metPy, errorFlag, subtract_qT);
+      std::pair<double, double> uProj = compMEtProjU(qX, qY, metPx_summed, metPy_summed, errorFlag, subtract_qT);
       if ( !errorFlag ) {
 	double uParl = uProj.first;
 	double uPerp = uProj.second;
 	double absZvtx = TMath::Abs(zVtx);
 	if ( absZvtx < 5. ) {
 	  histogram_uParl_vs_qT_absZvtxLt5->Fill(qT, uParl, evtWeight);
+	  if ( qT > 1. ) histogram_uParlDivQt_vs_qT_absZvtxLt5->Fill(uParl/qT, uParl, evtWeight);   
 	  histogramQt_absZvtxLt5->Fill(qT, evtWeight);
 	} else if ( absZvtx < 15. ) {
 	  histogram_uParl_vs_qT_absZvtx5to15->Fill(qT, uParl, evtWeight);
+	  if ( qT > 1. ) histogram_uParlDivQt_vs_qT_absZvtx5to15->Fill(uParl/qT, uParl, evtWeight);
 	  histogramQt_absZvtx5to15->Fill(qT, evtWeight);
 	} else {
 	  histogram_uParl_vs_qT_absZvtxGt15->Fill(qT, uParl, evtWeight);
+	  if ( qT > 1. ) histogram_uParlDivQt_vs_qT_absZvtxGt15->Fill(uParl/qT, uParl, evtWeight);
 	  histogramQt_absZvtxGt15->Fill(qT, evtWeight);
 	}	
 	histogram_uParl_vs_qT->Fill(qT, uParl, evtWeight);
+	if ( qT > 1. ) histogram_uParlDivQt_vs_qT->Fill(qT, uParl, evtWeight);
 	histogramQt->Fill(qT, evtWeight);      
       }
       for ( std::vector<binningEntryType*>::iterator binningEntry = binningEntries.begin();
@@ -423,6 +428,11 @@ int main(int argc, char* argv[])
 
   for ( std::vector<binningEntryType*>::iterator it = binningEntries.begin();
 	it != binningEntries.end(); ++it ) {
+    delete (*it);
+  }
+
+  for ( std::vector<weightEntryType*>::iterator it = weightEntries.begin();
+	it != weightEntries.end(); ++it ) {
     delete (*it);
   }
 
