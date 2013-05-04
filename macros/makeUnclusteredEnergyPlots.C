@@ -25,7 +25,7 @@
 #include <math.h>
 #include <limits>
 
-enum { kUndefined, kCalo, kPF };
+enum { kUndefined, kCalo, kTrack, kPF };
 
 TH1* getHistogram(TFile* inputFile, const std::string& dqmDirectory, const std::string& meName)
 {  
@@ -61,47 +61,68 @@ TH1* rebinHistogram(const TH1* histogram, unsigned numBinsMin_rebinned, double x
   TH1* histogram_rebinned = 0;
 
   if ( histogram ) {
-    unsigned numBins = histogram->GetNbinsX();
+    TAxis* xAxis = histogram->GetXaxis();
+
+    unsigned numBins = xAxis->GetNbins();
     unsigned numBins_withinRange = 0;
+    double binWidth = 0.;
+    bool isVariableBinning = false;
     for ( unsigned iBin = 1; iBin <= numBins; ++iBin ) {
-      double binCenter = histogram->GetBinCenter(iBin);
+      double binCenter = xAxis->GetBinCenter(iBin);
       if ( binCenter >= xMin && binCenter <= xMax ) ++numBins_withinRange;
+      if ( iBin == 1 ) binWidth = xAxis->GetBinWidth(iBin);
+      else if ( TMath::Abs(xAxis->GetBinWidth(iBin) - binWidth) > (1.e-3*binWidth) ) isVariableBinning = true;
     }
 
-    //std::cout << "histogram = " << histogram->GetName() << ":" 
-    //          << " numBins(" << xMin << ".." << "xMax) = " << numBins_withinRange << ", integral = " << histogram->Integral() << std::endl;
+    std::cout << "histogram = " << histogram->GetName() << ":" 
+              << " numBins(" << xMin << ".." << "xMax) = " << numBins_withinRange << ", integral = " << histogram->Integral() << std::endl;
     
     unsigned numBins_rebinned = numBins_withinRange;
-
-    for ( int combineNumBins = 5; combineNumBins >= 2; --combineNumBins ) {
-      if ( numBins_withinRange >= (combineNumBins*numBinsMin_rebinned) && (numBins % combineNumBins) == 0 ) {
-        numBins_rebinned /= combineNumBins;
-        numBins_withinRange /= combineNumBins;
+    if ( !isVariableBinning ) {
+      for ( int combineNumBins = 5; combineNumBins >= 2; --combineNumBins ) {
+	if ( numBins_withinRange >= (combineNumBins*numBinsMin_rebinned) && (numBins % combineNumBins) == 0 ) {
+	  numBins_rebinned /= combineNumBins;
+	  numBins_withinRange /= combineNumBins;
+	}
       }
     }
 
     std::string histogramName_rebinned = std::string(histogram->GetName()).append("_rebinned");
-    histogram_rebinned = new TH1D(histogramName_rebinned.data(), histogram->GetTitle(), numBins_rebinned, xMin, xMax);
+    if ( !isVariableBinning ) {
+      histogram_rebinned = new TH1D(histogramName_rebinned.data(), histogram->GetTitle(), numBins_rebinned, xMin, xMax);
+    } else {
+      TArrayF binning_withinRange(numBins_withinRange + 1);
+      unsigned iBin_withinRange = 1;
+      for ( unsigned iBin = 1; iBin <= numBins; ++iBin ) {
+	double binCenter = xAxis->GetBinCenter(iBin);
+	if ( binCenter >= xMin && binCenter <= xMax ) {
+	  if ( iBin_withinRange == 1 ) binning_withinRange[0] = xAxis->GetBinLowEdge(iBin);
+	  binning_withinRange[iBin_withinRange] = xAxis->GetBinUpEdge(iBin);
+	  ++iBin_withinRange;
+	}
+      }
+      histogram_rebinned = new TH1D(histogramName_rebinned.data(), histogram->GetTitle(), numBins_rebinned, binning_withinRange.GetArray());
+    }
     if ( !histogram_rebinned->GetSumw2N() ) histogram_rebinned->Sumw2();
 
-    TAxis* xAxis = histogram_rebinned->GetXaxis();
+    TAxis* xAxis_rebinned = histogram_rebinned->GetXaxis();
       
     unsigned iBin = 1;
     for ( unsigned iBin_rebinned = 1; iBin_rebinned <= numBins_rebinned; ++iBin_rebinned ) {
       double binContent_rebinned = 0.;
       double binError2_rebinned = 0.;
 
-      double xMin_rebinnedBin = xAxis->GetBinLowEdge(iBin_rebinned);
-      double xMax_rebinnedBin = xAxis->GetBinUpEdge(iBin_rebinned);
+      double xMin_rebinnedBin = xAxis_rebinned->GetBinLowEdge(iBin_rebinned);
+      double xMax_rebinnedBin = xAxis_rebinned->GetBinUpEdge(iBin_rebinned);
 
       while ( histogram->GetBinCenter(iBin) < xMin_rebinnedBin ) {
-        ++iBin;
+	++iBin;
       }
 
       while ( histogram->GetBinCenter(iBin) >= xMin_rebinnedBin && histogram->GetBinCenter(iBin) < xMax_rebinnedBin ) {
-        binContent_rebinned += histogram->GetBinContent(iBin);
-        binError2_rebinned += square(histogram->GetBinError(iBin));
-        ++iBin;
+	binContent_rebinned += histogram->GetBinContent(iBin);
+	binError2_rebinned += square(histogram->GetBinError(iBin));
+	++iBin;
       }
 
       histogram_rebinned->SetBinContent(iBin_rebinned, binContent_rebinned);
@@ -113,8 +134,8 @@ TH1* rebinHistogram(const TH1* histogram, unsigned numBinsMin_rebinned, double x
       histogram_rebinned->Scale(1./histogram_rebinned->Integral());
     }
 
-    //std::cout << "histogram(rebinned) = " << histogram_rebinned->GetName() << ":" 
-    //          << " numBins = " << histogram_rebinned->GetNbinsX() << ", integral = " << histogram_rebinned->Integral() << std::endl;
+    std::cout << "histogram(rebinned) = " << histogram_rebinned->GetName() << ":" 
+              << " numBins = " << histogram_rebinned->GetNbinsX() << ", integral = " << histogram_rebinned->Integral() << std::endl;
   }
 
   return histogram_rebinned;
@@ -185,7 +206,7 @@ void showDistribution(double canvasSizeX, double canvasSizeY,
   int colors[6] = { 1, 2, 3, 4, 6, 7 };
   int markerStyles[6] = { 22, 32, 20, 24, 21, 25 };
 
-  TLegend* legend = new TLegend(legendX0, legendY0, legendX0 + 0.32, legendY0 + 0.22, "", "brNDC"); 
+  TLegend* legend = new TLegend(legendX0, legendY0, legendX0 + 0.42, legendY0 + 0.22, "", "brNDC"); 
   legend->SetBorderSize(0);
   legend->SetFillColor(0);
 
@@ -356,8 +377,8 @@ void showDistribution(double canvasSizeX, double canvasSizeY,
 enum { kMean, kRMS };
 
 TGraphAsymmErrors* makeGraph_mean_or_rms(const std::string& name, const std::string& title, 
-					 const TH3* histogram_uParl_vs_eta_vs_qT, const TH1* histogram_qT, int qTbin, int mode, bool divideByBinWidth,
-					 std::map<int, std::map<int, TH1*> >& histograms_uParl_proj) 
+					 const TH3* histogram_uParl_vs_eta_vs_qT, const TH1* histogram_qT, int qTbinMin, int qTbinMax, int mode, bool divideByBinWidth,
+					 std::map<int, std::map<int, std::map<int, TH1*> > >& histograms_uParl_proj) 
 {
   //std::cout << "<makeGraph_mean_or_rms>:" << std::endl;
   //std::cout << " name = " << name << std::endl;
@@ -366,10 +387,10 @@ TGraphAsymmErrors* makeGraph_mean_or_rms(const std::string& name, const std::str
 
   const TAxis* qTaxis = histogram_uParl_vs_eta_vs_qT->GetXaxis();
   int qTnumBins = qTaxis->GetNbins();
-  assert(qTbin >= 1 && qTbin <= qTnumBins);
-
-  double qTmin = qTaxis->GetBinLowEdge(qTbin);
-  double qTmax = qTaxis->GetBinUpEdge(qTbin);
+  assert(qTbinMin >= 1 && qTbinMin <= qTbinMax && qTbinMax <= qTnumBins);
+  
+  double qTmin = qTaxis->GetBinLowEdge(qTbinMin);
+  double qTmax = qTaxis->GetBinUpEdge(qTbinMax);
 
   int binLowIndex = const_cast<TH1*>(histogram_qT)->FindBin(qTmin);
   int binUpIndex  = const_cast<TH1*>(histogram_qT)->FindBin(qTmax);
@@ -395,9 +416,9 @@ TGraphAsymmErrors* makeGraph_mean_or_rms(const std::string& name, const std::str
 
     //std::cout << " eta: min = " << etaMin << ", max = " << etaMax << ", center = " << x << std::endl;
 
-    TString histogramName_uParl_proj = Form("%s_pz_%i_%i", histogram_uParl_vs_eta_vs_qT->GetName(), qTbin, etaBin);
-    TH1D* histogram_uParl_proj = histogram_uParl_vs_eta_vs_qT->ProjectionZ(histogramName_uParl_proj.Data(), qTbin, qTbin, etaBin, etaBin, "e");
-    histograms_uParl_proj[qTbin][etaBin] = histogram_uParl_proj;
+    TString histogramName_uParl_proj = Form("%s_pz_%ito%i_%i", histogram_uParl_vs_eta_vs_qT->GetName(), qTbinMin, qTbinMax, etaBin);
+    TH1D* histogram_uParl_proj = histogram_uParl_vs_eta_vs_qT->ProjectionZ(histogramName_uParl_proj.Data(), qTbinMin, qTbinMax, etaBin, etaBin, "e");
+    histograms_uParl_proj[qTbinMin][qTbinMax][etaBin] = histogram_uParl_proj;
     // CV: skip (qT, eta) bins with limited event statistics
     //if ( !(histogram_uParl_proj->GetEntries() >= 100) ) continue;
 
@@ -424,6 +445,51 @@ TGraphAsymmErrors* makeGraph_mean_or_rms(const std::string& name, const std::str
   // reset x-axis range selection 
   histogram_qT->GetXaxis()->SetRange(1., 0.);
 
+  return graph;
+}
+
+TGraphAsymmErrors* makeGraph_uParl_div_qT(const std::string& name, const std::string& title, 
+					  const TH2* histogram_uParl_vs_qT, const TH1* histogram_qT, bool isCaloMEt)
+{
+  //std::cout << "<makeGraph_uParl_div_qT>:" << std::endl;
+  //std::cout << " name = " << name << std::endl;
+
+  if ( !(histogram_uParl_vs_qT && histogram_qT) ) return 0;
+  
+  const TAxis* xAxis = histogram_uParl_vs_qT->GetXaxis();
+  int numBins = xAxis->GetNbins();
+
+  TGraphAsymmErrors* graph = new TGraphAsymmErrors(numBins);
+  graph->SetName(name.data());
+  graph->SetTitle(title.data());  
+
+  for ( int iBin = 1; iBin <= numBins; ++iBin ) {
+    double qTmin = xAxis->GetBinLowEdge(iBin);
+    double qTmax = xAxis->GetBinUpEdge(iBin);
+
+    int binLowIndex = const_cast<TH1*>(histogram_qT)->FindBin(qTmin);
+    int binUpIndex  = const_cast<TH1*>(histogram_qT)->FindBin(qTmax);
+    histogram_qT->GetXaxis()->SetRange(binLowIndex, binUpIndex);
+
+    //double x        = histogram_qT->GetMean();
+    double x        = xAxis->GetBinCenter(iBin);
+    double xErrUp   = qTmax - x;
+    double xErrDown = x - qTmin;
+
+    TString histogramName_uParl_proj = Form("%s_py_%i", histogram_uParl_vs_qT->GetName(), iBin);
+    TH1D* histogram_uParl_proj = histogram_uParl_vs_qT->ProjectionY(histogramName_uParl_proj.Data(), iBin, iBin, "e");
+    // CV: skip qT bins with limited event statistics
+    //if ( !(histogram_uParl_proj->GetEntries() >= 100) ) continue;
+
+    if ( x > 0. ) {
+      double y = -histogram_uParl_proj->GetMean()/x;    
+      if ( isCaloMEt ) y -= 1.; 
+      double yErr = histogram_uParl_proj->GetMeanError()/x;
+      graph->SetPoint(iBin - 1, x, y);      
+      graph->SetPointError(iBin - 1, xErrDown, xErrUp, yErr, yErr);
+    }
+  }
+  
   return graph;
 }
 
@@ -464,7 +530,7 @@ TGraphAsymmErrors* compRatioGraph(const std::string& ratioGraphName, const TGrap
     denominator->GetPoint(iPoint, x_denominator, y_denominator);
     //std::cout << "point #" << iPoint << ": x(numerator) = " << x_numerator << ", x(denominator) = " << x_denominator << std::endl;
     if ( TMath::Abs(x_denominator - x_numerator) > 1.e-3 ) {
-      std::cerr << "Incompatible binning of numerator and denominator histograms !!" << std::endl;
+      std::cerr << "Incompatible binning of numerator and denominator graphs !!" << std::endl;
       std::cout << "point #" << iPoint << ": x(numerator) = " << x_numerator << ", x(denominator) = " << x_denominator << std::endl;
       assert(0);
     }
@@ -559,7 +625,7 @@ void showGraphs(double canvasSizeX, double canvasSizeY,
   int colors[6] = { 1, 2, 3, 4, 6, 7 };
   int markerStyles[6] = { 22, 32, 20, 24, 21, 25 };
 
-  TLegend* legend = new TLegend(legendX0, legendY0, legendX0 + 0.33, legendY0 + 0.25, "", "brNDC"); 
+  TLegend* legend = new TLegend(legendX0, legendY0, legendX0 + 0.43, legendY0 + 0.25, "", "brNDC"); 
   legend->SetBorderSize(0);
   legend->SetFillColor(0);
 
@@ -626,7 +692,7 @@ void showGraphs(double canvasSizeX, double canvasSizeY,
     graph5->SetMarkerColor(colors[4]);
     graph5->SetMarkerStyle(markerStyles[4]);
     graph5->SetMarkerSize(1);
-    graph5->Draw("p");
+    //graph5->Draw("p");
     legend->AddEntry(graph5, legendEntry5.data(), "p");
   }
 
@@ -694,11 +760,14 @@ void showGraphs(double canvasSizeX, double canvasSizeY,
     graph4_div_ref->Draw("p");
   }
 
-  TGraph* graph5_div_ref = 0;
+  //TGraph* graph5_div_ref = 0;
+  //if ( graph5 ) {
+  //  std::string graphName5_div_ref = std::string(graph5->GetName()).append("_div_").append(graph_ref->GetName());
+  //  graph5_div_ref = compRatioGraph(graphName5_div_ref, graph5, graph_ref);
+  //  graph5_div_ref->Draw("p");
+  //}
   if ( graph5 ) {
-    std::string graphName5_div_ref = std::string(graph5->GetName()).append("_div_").append(graph_ref->GetName());
-    graph5_div_ref = compRatioGraph(graphName5_div_ref, graph5, graph_ref);
-    graph5_div_ref->Draw("p");
+    graph5->Draw("p");
   }
  
   //TGraph* graph6_div_ref = 0;
@@ -732,7 +801,7 @@ void showGraphs(double canvasSizeX, double canvasSizeY,
   delete graph2_div_ref;
   delete graph3_div_ref;
   delete graph4_div_ref;
-  delete graph5_div_ref;
+  //delete graph5_div_ref;
   //delete graph6_div_ref;
   delete dummyHistogram_top;
   delete topPad;
@@ -786,193 +855,149 @@ void makeUnclusteredEnergyPlots()
   gROOT->SetBatch(true);
 
   //std::string type_string = "caloTowers";
-  std::string type_string = "pfCands";
+  //std::string type_string = "pfCands";
   //std::string type_string = "tracks";
+  std::string type_string = "genParticles";
   
   TFile* inputFile = 0;
   std::map<std::string, std::string> dqmDirectories;
   int type = 0;
+  double yMin_response = 0.;
   if ( type_string == "caloTowers" ) {
     std::string inputFilePath = "/afs/cern.ch/user/v/veelken/scratch0/CMSSW_5_3_3_patch2/src/TauAnalysis/RecoTools/test";
     std::string inputFileName = "UnclusteredEnergyAnalyzer_all_caloTowers.root";
     inputFile = new TFile(Form("%s/%s", inputFilePath.data(), inputFileName.data()));
-    dqmDirectories["data"]         = "Data_runs203894to208686_caloTowers_central";
-    dqmDirectories["mc_central"]   = "ZplusJets_madgraph_caloTowers_central";
-    dqmDirectories["mc_shiftUp"]   = "ZplusJets_madgraph_caloTowers_shiftUp";
-    dqmDirectories["mc_shiftDown"] = "ZplusJets_madgraph_caloTowers_shiftDown";
+    dqmDirectories["data"]                 = "Data_runs203894to208686_caloTowers_central";
+    dqmDirectories["data_wCalibration"]    = "Data_runs203894to208686_caloTowers_wCalibration";
+    dqmDirectories["mc_central"]           = "ZplusJets_madgraph_caloTowers_central";
+    dqmDirectories["mc_shiftUp"]           = "ZplusJets_madgraph_caloTowers_shiftUp";
+    dqmDirectories["mc_shiftDown"]         = "ZplusJets_madgraph_caloTowers_shiftDown";
     type = kCalo;
+    yMin_response = 0.2;
   } else if ( type_string == "caloTowersNoHF" ) {
     std::string inputFilePath = "/afs/cern.ch/user/v/veelken/scratch0/CMSSW_5_3_3_patch2/src/TauAnalysis/RecoTools/test";
     std::string inputFileName = "UnclusteredEnergyAnalyzer_all_caloTowersNoHF.root";
     inputFile = new TFile(Form("%s/%s", inputFilePath.data(), inputFileName.data()));
-    dqmDirectories["data"]         = "Data_runs203894to208686_caloTowersNoHF_central";
-    dqmDirectories["mc_central"]   = "ZplusJets_madgraph_caloTowersNoHF_central";
-    dqmDirectories["mc_shiftUp"]   = "ZplusJets_madgraph_caloTowersNoHF_shiftUp";
-    dqmDirectories["mc_shiftDown"] = "ZplusJets_madgraph_caloTowersNoHF_shiftDown";
+    dqmDirectories["data"]                 = "Data_runs203894to208686_caloTowersNoHF_central";
+    dqmDirectories["mc_central"]           = "ZplusJets_madgraph_caloTowersNoHF_central";
+    dqmDirectories["mc_shiftUp"]           = "ZplusJets_madgraph_caloTowersNoHF_shiftUp";
+    dqmDirectories["mc_shiftDown"]         = "ZplusJets_madgraph_caloTowersNoHF_shiftDown";
     type = kCalo;
+    yMin_response = 0.2;
   } else if ( type_string == "pfCands" ) {
     std::string inputFilePath = "/afs/cern.ch/user/v/veelken/scratch0/CMSSW_5_3_3_patch2/src/TauAnalysis/RecoTools/test";
     std::string inputFileName = "UnclusteredEnergyAnalyzer_all_pfCands.root";
     inputFile = new TFile(Form("%s/%s", inputFilePath.data(), inputFileName.data()));
-    dqmDirectories["data"]         = "Data_runs203894to208686_pfCands_central";
-    dqmDirectories["mc_central"]   = "ZplusJets_madgraph_pfCands_central";
-    dqmDirectories["mc_shiftUp"]   = "ZplusJets_madgraph_pfCands_shiftUp";
-    dqmDirectories["mc_shiftDown"] = "ZplusJets_madgraph_pfCands_shiftDown";
+    dqmDirectories["data"]                 = "Data_runs203894to208686_pfCands_central";
+    dqmDirectories["data_wCalibration"]    = "Data_runs203894to208686_pfCands_wCalibration";
+    dqmDirectories["mc_central"]           = "ZplusJets_madgraph_pfCands_central";
+    dqmDirectories["mc_shiftUp"]           = "ZplusJets_madgraph_pfCands_shiftUp";
+    dqmDirectories["mc_shiftDown"]         = "ZplusJets_madgraph_pfCands_shiftDown";
+    //dqmDirectories["mc_woZvtxReweighting"] = "ZplusJets_madgraph_pfCands_woZvtxReweighting";
+    //dqmDirectories["mc_woQtReweighting"]   = "ZplusJets_madgraph_pfCands_woQtReweighting";
     type = kPF;
+    yMin_response = 0.5;
   } else if ( type_string == "tracks" ) {
     std::string inputFilePath = "/afs/cern.ch/user/v/veelken/scratch0/CMSSW_5_3_3_patch2/src/TauAnalysis/RecoTools/test";
     std::string inputFileName = "UnclusteredEnergyAnalyzer_all_tracks.root";
     inputFile = new TFile(Form("%s/%s", inputFilePath.data(), inputFileName.data()));
-    dqmDirectories["data"]         = "Data_runs203894to208686_tracks_central";
-    dqmDirectories["mc_central"]   = "ZplusJets_madgraph_tracks_central";
-    dqmDirectories["mc_shiftUp"]   = "";
-    dqmDirectories["mc_shiftDown"] = "";
-    type = kPF;
+    dqmDirectories["data"]                 = "Data_runs203894to208686_tracks_central";
+    dqmDirectories["data_wCalibration"]    = "Data_runs203894to208686_tracks_wCalibration";
+    dqmDirectories["mc_central"]           = "ZplusJets_madgraph_tracks_central";
+    dqmDirectories["mc_shiftUp"]           = "";
+    dqmDirectories["mc_shiftDown"]         = "";
+    type = kTrack;
+    yMin_response = 0.5;
   } else if ( type_string == "genParticles" ) {
     std::string inputFilePath = "/afs/cern.ch/user/v/veelken/scratch0/CMSSW_5_3_3_patch2/src/TauAnalysis/RecoTools/test";
     std::string inputFileName = "UnclusteredEnergyAnalyzer_all_pfCands.root";
     inputFile = new TFile(Form("%s/%s", inputFilePath.data(), inputFileName.data()));
-    dqmDirectories["data"]         = "";
-    dqmDirectories["mc_central"]   = "ZplusJets_madgraph_genParticles_central";
-    dqmDirectories["mc_shiftUp"]   = "";
-    dqmDirectories["mc_shiftDown"] = "";
+    dqmDirectories["data"]                 = "";
+    dqmDirectories["mc_central"]           = "ZplusJets_madgraph_genParticles_central";
+    dqmDirectories["mc_shiftUp"]           = "";
+    dqmDirectories["mc_shiftDown"]         = "";
     type = kPF;
+    yMin_response = 0.5;
   } else {
     std::cerr << "Invalid Configuration Parameter 'type' = " << type  << " !!" << std::endl;
     assert(0);
   }
 
-/*
-  TH2* histogram_uParl_vs_qT_absZvtxLt5_data   = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["data"], "uParl_vs_qT_absZvtxLt5"));
-  TH2* histogram_uParl_vs_qT_absZvtx5to15_data = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["data"], "uParl_vs_qT_absZvtx5to15"));
-  TH2* histogram_uParl_vs_qT_absZvtxGt15_data  = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["data"], "uParl_vs_qT_absZvtxGt15"));
-  TH2* histogram_uParl_vs_qT_data              = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["data"], "uParl_vs_qT"));
+  TH1* histogram_qT_data                          = getHistogram(inputFile, dqmDirectories["data"], "qT");
+  TH1* histogram_qT_data_wCalibration             = getHistogram(inputFile, dqmDirectories["data_wCalibration"], "qT");
+  TH1* histogram_qT_mc_central                    = getHistogram(inputFile, dqmDirectories["mc_central"], "qT");
+  TH1* histogram_qT_mc_shiftUp                    = getHistogram(inputFile, dqmDirectories["mc_shiftUp"], "qT");
+  TH1* histogram_qT_mc_shiftDown                  = getHistogram(inputFile, dqmDirectories["mc_shiftDown"], "qT");
+  TH1* histogram_qT_mc_woZvtxReweighting          = getHistogram(inputFile, dqmDirectories["mc_woZvtxReweighting"], "qT");
+  TH1* histogram_qT_mc_woQtReweighting            = getHistogram(inputFile, dqmDirectories["mc_woQtReweighting"], "qT");
 
-  TH2* histogram_uParl_vs_qT_absZvtxLt5_mc     = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_central"],      "uParl_vs_qT_absZvtxLt5"));
-  TH2* histogram_uParl_vs_qT_absZvtx5to15_mc   = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_central"],      "uParl_vs_qT_absZvtx5to15"));
-  TH2* histogram_uParl_vs_qT_absZvtxGt15_mc    = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_central"],      "uParl_vs_qT_absZvtxGt15"));
-  TH2* histogram_uParl_vs_qT_mc                = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_central"],      "uParl_vs_qT"));
+  TH2* histogram_uParl_vs_qT_data                 = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["data"], "uParl_vs_qT"));
+  TH2* histogram_uParl_vs_qT_data_wCalibration    = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["data_wCalibration"], "uParl_vs_qT"));
+  TH2* histogram_uParl_vs_qT_mc_central           = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_central"], "uParl_vs_qT"));
+  TH2* histogram_uParl_vs_qT_mc_shiftUp           = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_shiftUp"], "uParl_vs_qT"));
+  TH2* histogram_uParl_vs_qT_mc_shiftDown         = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_shiftDown"], "uParl_vs_qT"));
+  TH2* histogram_uParl_vs_qT_mc_woZvtxReweighting = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_woZvtxReweighting"], "uParl_vs_qT"));
+  TH2* histogram_uParl_vs_qT_mc_woQtReweighting   = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_woQtReweighting"], "uParl_vs_qT"));
   
-  for ( int iBinX = 1; iBinX <= 8; ++iBinX ) {
-    TH1* histogram_uParl_absZvtxLt5_data   = getHistogramProjY(histogram_uParl_vs_qT_absZvtxLt5_data, iBinX);
-    TH1* histogram_uParl_absZvtx5to15_data = getHistogramProjY(histogram_uParl_vs_qT_absZvtx5to15_data, iBinX);
-    TH1* histogram_uParl_absZvtxGt15_data  = getHistogramProjY(histogram_uParl_vs_qT_absZvtxGt15_data, iBinX);
-    TH1* histogram_uParl_data              = getHistogramProjY(histogram_uParl_vs_qT_data, iBinX);
-    
-    TH1* histogram_uParl_absZvtxLt5_mc     = getHistogramProjY(histogram_uParl_vs_qT_absZvtxLt5_mc, iBinX);
-    TH1* histogram_uParl_absZvtx5to15_mc   = getHistogramProjY(histogram_uParl_vs_qT_absZvtx5to15_mc, iBinX);
-    TH1* histogram_uParl_absZvtxGt15_mc    = getHistogramProjY(histogram_uParl_vs_qT_absZvtxGt15_mc, iBinX);
-    TH1* histogram_uParl_mc                = getHistogramProjY(histogram_uParl_vs_qT_mc, iBinX);
-
-    TAxis* xAxis = histogram_uParl_vs_qT_absZvtxLt5_data->GetXaxis();
-    double qTmin = xAxis->GetBinLowEdge(iBinX);
-    double qTmax = xAxis->GetBinUpEdge(iBinX);
-
-    TString outputFileName = Form("plots/makeUnclusteredEnergyPlots_uParl_for_qT%1.1fto%1.1f", qTmin, qTmax);
-    outputFileName.ReplaceAll(".", "_");
-    outputFileName.Append(".png");
-    showDistribution(800, 900,
-		     //histogram_uParl_absZvtxLt5_data, "Data: |z_{Vtx}| < 5cm",
-		     //histogram_uParl_absZvtx5to15_data, "Data: 5 < |z_{Vtx}| < 15cm",
-		     //histogram_uParl_absZvtxGt15_data, "Data: |z_{Vtx}| > 15cm",
-		     histogram_uParl_data, "Data",
-		     //histogram_uParl_absZvtxLt5_mc, "MC: |z_{Vtx}| < 5cm",
-		     //histogram_uParl_absZvtx5to15_mc, "MC: 5 < |z_{Vtx}| < 15cm",
-		     //histogram_uParl_absZvtxGt15_mc, "MC: |z_{Vtx}| > 15cm",
-		     histogram_uParl_mc, "MC",
-		     0, "",
-		     0, "",
-		     0, "",
-		     0, "",
-		     -100.0, +75.0, 70, "u_{#parallel} / GeV", 1.2, 
-		     true, 1.e-6, 1.e+1, "a.u.", 1.2,
-		     0.64, 0.72, 
-		     outputFileName.Data());
-
-    delete histogram_uParl_absZvtxLt5_data;
-    delete histogram_uParl_absZvtx5to15_data;
-    delete histogram_uParl_absZvtxGt15_data;
-    delete histogram_uParl_data;
-    delete histogram_uParl_absZvtxLt5_mc;
-    delete histogram_uParl_absZvtx5to15_mc;
-    delete histogram_uParl_absZvtxGt15_mc;
-    delete histogram_uParl_mc;
-  }
+  TGraphAsymmErrors* graph_uParlDivQt_vs_qT_data = makeGraph_uParl_div_qT( 
+    "graphs_uParlDivQt_vs_qT_data", 
+    "u_{#parallel}/q_{T} vs q_{T}", histogram_uParl_vs_qT_data, histogram_qT_data, false);
+  TGraphAsymmErrors* graph_uParlDivQt_vs_qT_data_wCalibration = makeGraph_uParl_div_qT( 
+    "graphs_uParlDivQt_vs_qT_data_wCalibration", 
+    "u_{#parallel}/q_{T} vs q_{T}", histogram_uParl_vs_qT_data_wCalibration, histogram_qT_data_wCalibration, false);
+  TGraphAsymmErrors* graph_uParlDivQt_vs_qT_mc_central = makeGraph_uParl_div_qT( 
+    "graphs_uParlDivQt_vs_qT_mc_central", 
+    "u_{#parallel}/q_{T} vs q_{T}", histogram_uParl_vs_qT_mc_central, histogram_qT_mc_central, false);
+  TGraphAsymmErrors* graph_uParlDivQt_vs_qT_mc_shiftUp = makeGraph_uParl_div_qT( 
+    "graphs_uParlDivQt_vs_qT_mc_shiftUp", 
+    "u_{#parallel}/q_{T} vs q_{T}", histogram_uParl_vs_qT_mc_shiftUp, histogram_qT_mc_shiftUp, false);
+  TGraphAsymmErrors* graph_uParlDivQt_vs_qT_mc_shiftDown = makeGraph_uParl_div_qT( 
+    "graphs_uParlDivQt_vs_qT_mc_shiftDown", 
+    "u_{#parallel}/q_{T} vs q_{T}", histogram_uParl_vs_qT_mc_shiftDown, histogram_qT_mc_shiftDown, false);
+  TGraphAsymmErrors* graph_uParlDivQt_vs_qT_mc_woZvtxReweighting = makeGraph_uParl_div_qT( 
+    "graphs_uParlDivQt_vs_qT_mc_woZvtxReweighting", 
+    "u_{#parallel}/q_{T} vs q_{T}", histogram_uParl_vs_qT_mc_woZvtxReweighting, histogram_qT_mc_woZvtxReweighting, false);
+  TGraphAsymmErrors* graph_uParlDivQt_vs_qT_mc_woQtReweighting = makeGraph_uParl_div_qT( 
+    "graphs_uParlDivQt_vs_qT_mc_woQtReweighting", 
+    "u_{#parallel}/q_{T} vs q_{T}", histogram_uParl_vs_qT_mc_woQtReweighting, histogram_qT_mc_woQtReweighting, false);
   
-  TH2* histogram_uParlDivQt_vs_qT_absZvtxLt5_data   = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["data"], "uParlDivQt_vs_qT_absZvtxLt5"));
-  TH2* histogram_uParlDivQt_vs_qT_absZvtx5to15_data = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["data"], "uParlDivQt_vs_qT_absZvtx5to15"));
-  TH2* histogram_uParlDivQt_vs_qT_absZvtxGt15_data  = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["data"], "uParlDivQt_vs_qT_absZvtxGt15"));
-  TH2* histogram_uParlDivQt_vs_qT_data              = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["data"], "uParlDivQt_vs_qT"));
-
-  TH2* histogram_uParlDivQt_vs_qT_absZvtxLt5_mc     = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_central"],      "uParlDivQt_vs_qT_absZvtxLt5"));
-  TH2* histogram_uParlDivQt_vs_qT_absZvtx5to15_mc   = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_central"],      "uParlDivQt_vs_qT_absZvtx5to15"));
-  TH2* histogram_uParlDivQt_vs_qT_absZvtxGt15_mc    = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_central"],      "uParlDivQt_vs_qT_absZvtxGt15"));
-  TH2* histogram_uParlDivQt_vs_qT_mc                = dynamic_cast<TH2*>(getHistogram(inputFile, dqmDirectories["mc_central"],      "uParlDivQt_vs_qT"));
+  showGraphs(800, 900,
+	     graph_uParlDivQt_vs_qT_data, "Data",
+	     graph_uParlDivQt_vs_qT_data_wCalibration, "Data, calibrated",
+	     graph_uParlDivQt_vs_qT_mc_central, "Simulation, w. q_{T} Reweighting",
+	     //graph_uParlDivQt_vs_qT_mc_shiftUp, "Simulation +10%",
+	     //graph_uParlDivQt_vs_qT_mc_shiftDown, "Simulation -10%",
+	     //graph_uParlDivQt_vs_qT_mc_woZvtxReweighting, "Simulation, wo. z_{vtx} Reweighting",
+	     graph_uParlDivQt_vs_qT_mc_woQtReweighting, "Simulation, wo. q_{T} Reweighting",
+	     //0, "",
+	     //0, "",
+	     0, "",
+	     0, "",
+	     0, "",
+	     0., 300., 10, "q_{T}", 1.2,
+	     false, yMin_response, 1.25, 0.75, 1.25, "<-u_{#parallel}>/q_{T}", 1.2, 
+	     0.21, 0.69, 
+	     Form("plots/makeUnclusteredEnergyPlots_%s_uParlDivQt_vs_qT.png", type_string.data()));
   
-  for ( int iBinX = 1; iBinX <= 8; ++iBinX ) {
-    TH1* histogram_uParlDivQt_absZvtxLt5_data   = getHistogramProjY(histogram_uParl_vs_qT_absZvtxLt5_data, iBinX);
-    TH1* histogram_uParlDivQt_absZvtx5to15_data = getHistogramProjY(histogram_uParl_vs_qT_absZvtx5to15_data, iBinX);
-    TH1* histogram_uParlDivQt_absZvtxGt15_data  = getHistogramProjY(histogram_uParl_vs_qT_absZvtxGt15_data, iBinX);
-    TH1* histogram_uParlDivQt_data              = getHistogramProjY(histogram_uParl_vs_qT_data, iBinX);
-    
-    TH1* histogram_uParlDivQt_absZvtxLt5_mc     = getHistogramProjY(histogram_uParl_vs_qT_absZvtxLt5_mc, iBinX);
-    TH1* histogram_uParlDivQt_absZvtx5to15_mc   = getHistogramProjY(histogram_uParl_vs_qT_absZvtx5to15_mc, iBinX);
-    TH1* histogram_uParlDivQt_absZvtxGt15_mc    = getHistogramProjY(histogram_uParl_vs_qT_absZvtxGt15_mc, iBinX);
-    TH1* histogram_uParlDivQt_mc                = getHistogramProjY(histogram_uParl_vs_qT_mc, iBinX);
+  delete graph_uParlDivQt_vs_qT_data;
+  delete graph_uParlDivQt_vs_qT_mc_central;
+  delete graph_uParlDivQt_vs_qT_mc_shiftUp;
+  delete graph_uParlDivQt_vs_qT_mc_shiftDown;
 
-    TAxis* xAxis = histogram_uParlDivQt_vs_qT_absZvtxLt5_data->GetXaxis();
-    double qTmin = xAxis->GetBinLowEdge(iBinX);
-    double qTmax = xAxis->GetBinUpEdge(iBinX);
-
-    TString outputFileName = Form("plots/makeUnclusteredEnergyPlots_uParlDivQt_for_qT%1.1fto%1.1f", qTmin, qTmax);
-    outputFileName.ReplaceAll(".", "_");
-    outputFileName.Append(".png");
-    showDistribution(800, 900,
-		     //histogram_uParlDivQt_absZvtxLt5_data, "Data: |z_{Vtx}| < 5cm",
-		     //histogram_uParlDivQt_absZvtx5to15_data, "Data: 5 < |z_{Vtx}| < 15cm",
-		     //histogram_uParlDivQt_absZvtxGt15_data, "Data: |z_{Vtx}| > 15cm",
-		     histogram_uParlDivQt_data, "Data",
-		     //histogram_uParlDivQt_absZvtxLt5_mc, "MC: |z_{Vtx}| < 5cm",
-		     //histogram_uParlDivQt_absZvtx5to15_mc, "MC: 5 < |z_{Vtx}| < 15cm",
-		     //histogram_uParlDivQt_absZvtxGt15_mc, "MC: |z_{Vtx}| > 15cm",
-		     histogram_uParlDivQt_mc, "MC",
-		     0, "",
-		     0, "",
-		     0, "",
-		     0, "",
-		     -100.0, +75.0, 70, "u_{#parallel} / GeV", 1.2, 
-		     true, 1.e-6, 1.e+1, "a.u.", 1.2,
-		     0.61, 0.72, 
-		     outputFileName.Data());
-
-    delete histogram_uParlDivQt_absZvtxLt5_data;
-    delete histogram_uParlDivQt_absZvtx5to15_data;
-    delete histogram_uParlDivQt_absZvtxGt15_data;
-    delete histogram_uParlDivQt_data;
-    delete histogram_uParlDivQt_absZvtxLt5_mc;
-    delete histogram_uParlDivQt_absZvtx5to15_mc;
-    delete histogram_uParlDivQt_absZvtxGt15_mc;
-    delete histogram_uParlDivQt_mc;
-  }
- */  
   TH3* histogram_uParl_vs_eta_vs_qT_data         = dynamic_cast<TH3*>(getHistogram(inputFile, dqmDirectories["data"], "uParl_vs_eta_vs_qT"));
-  TH1* histogram_qT_data                         = getHistogram(inputFile, dqmDirectories["data"], "qT");
   TH3* histogram_uParl_vs_eta_vs_qT_mc_central   = dynamic_cast<TH3*>(getHistogram(inputFile, dqmDirectories["mc_central"], "uParl_vs_eta_vs_qT"));
-  TH1* histogram_qT_mc_central                   = getHistogram(inputFile, dqmDirectories["mc_central"], "qT");
   TH3* histogram_uParl_vs_eta_vs_qT_mc_shiftUp   = dynamic_cast<TH3*>(getHistogram(inputFile, dqmDirectories["mc_shiftUp"], "uParl_vs_eta_vs_qT"));
-  TH1* histogram_qT_mc_shiftUp                   = getHistogram(inputFile, dqmDirectories["mc_shiftUp"], "qT");
   TH3* histogram_uParl_vs_eta_vs_qT_mc_shiftDown = dynamic_cast<TH3*>(getHistogram(inputFile, dqmDirectories["mc_shiftDown"], "uParl_vs_eta_vs_qT"));
-  TH1* histogram_qT_mc_shiftDown                 = getHistogram(inputFile, dqmDirectories["mc_shiftDown"], "qT");
     
   std::map<int, TGraphAsymmErrors*> graphs_uParl_vs_eta_data; // key = qTbin
   std::map<int, TGraphAsymmErrors*> graphs_uParl_vs_eta_mc_central;
   std::map<int, TGraphAsymmErrors*> graphs_uParl_vs_eta_mc_shiftUp;
   std::map<int, TGraphAsymmErrors*> graphs_uParl_vs_eta_mc_shiftDown;
 
-  std::map<int, std::map<int, TH1*> > histograms_uParl_proj_data; // key = (qTbin, etaBin)
-  std::map<int, std::map<int, TH1*> > histograms_uParl_proj_mc_central;
-  std::map<int, std::map<int, TH1*> > histograms_uParl_proj_mc_shiftUp;
-  std::map<int, std::map<int, TH1*> > histograms_uParl_proj_mc_shiftDown;
+  std::map<int, std::map<int, std::map<int, TH1*> > > histograms_uParl_proj_data; // key = (qTbinMin, qTbinMax, etaBin)
+  std::map<int, std::map<int, std::map<int, TH1*> > > histograms_uParl_proj_mc_central;
+  std::map<int, std::map<int, std::map<int, TH1*> > > histograms_uParl_proj_mc_shiftUp;
+  std::map<int, std::map<int, std::map<int, TH1*> > > histograms_uParl_proj_mc_shiftDown;
 
   const int numEtaBins = 32;
   double caloResidualJEC[numEtaBins] = { // CV: values taken from GR_P_V42_AN3
@@ -983,44 +1008,48 @@ void makeUnclusteredEnergyPlots()
     1.11195, 1.12798, 1.18941, 1.12886, 1.0827, 1.07055, 1.07341, 1.05673, 1.03475, 1.01773, 1.01945, 1.02173, 1.02334, 1.0208, 1.01602, 1.01115,
     1.01411, 1.01732, 1.02277, 1.02486, 1.02556, 1.01977, 1.01731, 1.03052, 1.06081, 1.07791, 1.07608, 1.0827, 1.12886, 1.18941, 1.12798, 1.11195
   };
-  
+
   const int qTnumBins = 34;
   const int etaNumBins = histogram_uParl_vs_eta_vs_qT_data->GetNbinsY();
 
-  TGraphAsymmErrors* graphResidualJEC_vs_eta = new TGraphAsymmErrors(etaNumBins);
-  for ( int etaBin = 1; etaBin <= etaNumBins; ++etaBin ) {
-    
-    TAxis* etaAxis = histogram_uParl_vs_eta_vs_qT_data->GetYaxis();
-    double etaMin = etaAxis->GetBinLowEdge(etaBin);
-    double etaMax = etaAxis->GetBinUpEdge(etaBin);
-
-    double x = 0.5*(etaMin + etaMax);
-    double xErr = 0.5*(etaMax - etaMin);
-    double y = 1.;
-    if      ( type == kCalo ) y = caloResidualJEC[etaBin - 1];
-    else if ( type == kPF   ) y = pfResidualJEC[etaBin - 1];
-    graphResidualJEC_vs_eta->SetPoint(etaBin - 1, x, y);
-    graphResidualJEC_vs_eta->SetPointEXhigh(etaBin - 1, xErr);
-    graphResidualJEC_vs_eta->SetPointEXlow(etaBin - 1, xErr);
+  TGraphAsymmErrors* graphResidualJEC_vs_eta = 0;
+  if ( type == kCalo || type == kPF ) {    
+    graphResidualJEC_vs_eta = new TGraphAsymmErrors(etaNumBins);
+    for ( int etaBin = 1; etaBin <= etaNumBins; ++etaBin ) {
+      
+      TAxis* etaAxis = histogram_uParl_vs_eta_vs_qT_data->GetYaxis();
+      double etaMin = etaAxis->GetBinLowEdge(etaBin);
+      double etaMax = etaAxis->GetBinUpEdge(etaBin);
+      
+      double x = 0.5*(etaMin + etaMax);
+      double xErr = 0.5*(etaMax - etaMin);
+      double y = 1.;
+      if      ( type == kCalo ) y = caloResidualJEC[etaBin - 1];
+      else if ( type == kPF   ) y = pfResidualJEC[etaBin - 1];
+      else assert(0);
+      graphResidualJEC_vs_eta->SetPoint(etaBin - 1, x, y);
+      graphResidualJEC_vs_eta->SetPointEXhigh(etaBin - 1, xErr);
+      graphResidualJEC_vs_eta->SetPointEXlow(etaBin - 1, xErr);
+    }
   }
 
   std::vector<double> qTbinning;
   for ( int qTbin = 1; qTbin <= qTnumBins; ++qTbin ) {
     TGraphAsymmErrors* graph_uParl_vs_eta_data = makeGraph_mean_or_rms(
       "uParl_vs_eta_data",         
-      "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_data, histogram_qT_data, qTbin, kMean, true,
+      "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_data, histogram_qT_data, qTbin, qTbin, kMean, true,
       histograms_uParl_proj_data);
     TGraphAsymmErrors* graph_uParl_vs_eta_mc_central = makeGraph_mean_or_rms(
       "uParl_vs_eta_mc_central",   
-      "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_mc_central, histogram_qT_mc_central, qTbin, kMean, true,
+      "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_mc_central, histogram_qT_mc_central, qTbin, qTbin, kMean, true,
       histograms_uParl_proj_mc_central);
     TGraphAsymmErrors* graph_uParl_vs_eta_mc_shiftUp = makeGraph_mean_or_rms(
       "uParl_vs_eta_mc_shiftUp",   
-      "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_mc_shiftUp, histogram_qT_mc_shiftUp, qTbin, kMean, true,
+      "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_mc_shiftUp, histogram_qT_mc_shiftUp, qTbin, qTbin, kMean, true,
       histograms_uParl_proj_mc_shiftUp);
     TGraphAsymmErrors* graph_uParl_vs_eta_mc_shiftDown = makeGraph_mean_or_rms(
       "uParl_vs_eta_mc_shiftDown", 
-      "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_mc_shiftDown, histogram_qT_mc_shiftDown, qTbin, kMean, true,
+      "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_mc_shiftDown, histogram_qT_mc_shiftDown, qTbin, qTbin, kMean, true,
       histograms_uParl_proj_mc_shiftDown);
     
     TAxis* qTaxis = histogram_uParl_vs_eta_vs_qT_data->GetXaxis();
@@ -1044,7 +1073,7 @@ void makeUnclusteredEnergyPlots()
 	       0, "",
 	       -5.191, +5.191, 10, "#eta", 1.2,
 	       false, -0.05, 0.50, 0.5, 2., "<-u_{#parallel}>/q_{T}", 1.2, 
-	       0.61, 0.69, 
+	       0.21, 0.69, 
 	       outputFileName.Data());
     
     //delete graph_uParl_vs_eta_data;
@@ -1058,10 +1087,12 @@ void makeUnclusteredEnergyPlots()
   }
   assert(qTbinning.size() == (qTnumBins + 1));
 
-  delete graphResidualJEC_vs_eta;
-
+  //delete graphResidualJEC_vs_eta;
+  
   std::vector<std::string> residualCorrections;
   residualCorrections.push_back("{1         JetEta              1          JetPt               [0]     Correction     L2Relative}");
+
+  TGraphAsymmErrors* graph_Fit_vs_eta = new TGraphAsymmErrors(etaNumBins);
 
   for ( int etaBin = 1; etaBin <= etaNumBins; ++etaBin ) {
     TGraphAsymmErrors* graph_uParl_vs_qT_data         = makeGraph_vs_qT(graphs_uParl_vs_eta_data, qTbinning, etaBin - 1);
@@ -1073,29 +1104,38 @@ void makeUnclusteredEnergyPlots()
     double etaMin = etaAxis->GetBinLowEdge(etaBin);
     double etaMax = etaAxis->GetBinUpEdge(etaBin);
 
-    TGraphAsymmErrors* graphResidualJEC_vs_qT = new TGraphAsymmErrors(etaNumBins);
-    for ( int qTbin = 1; qTbin <= qTnumBins; ++qTbin ) {
+    TGraphAsymmErrors* graphResidualJEC_vs_qT = 0;
+    if ( type == kCalo || type == kPF ) {
+      graphResidualJEC_vs_qT = new TGraphAsymmErrors(etaNumBins);
+      for ( int qTbin = 1; qTbin <= qTnumBins; ++qTbin ) {
     
-      TAxis* qTaxis = histogram_uParl_vs_eta_vs_qT_data->GetXaxis();
-      double qTmin = qTaxis->GetBinLowEdge(qTbin);
-      double qTmax = qTaxis->GetBinUpEdge(qTbin);
-
-      double x = 0.5*(qTmin + qTmax);
-      double xErr = 0.5*(qTmax - qTmin);
-      double y = 1.;
-      if      ( type == kCalo ) y = caloResidualJEC[etaBin - 1];
-      else if ( type == kPF   ) y = pfResidualJEC[etaBin - 1];
-      graphResidualJEC_vs_qT->SetPoint(qTbin - 1, x, y);
-      graphResidualJEC_vs_qT->SetPointEXhigh(qTbin - 1, xErr);
-      graphResidualJEC_vs_qT->SetPointEXlow(qTbin - 1, xErr);
+	TAxis* qTaxis = histogram_uParl_vs_eta_vs_qT_data->GetXaxis();
+	double qTmin = qTaxis->GetBinLowEdge(qTbin);
+	double qTmax = qTaxis->GetBinUpEdge(qTbin);
+	
+	double x = 0.5*(qTmin + qTmax);
+	double xErr = 0.5*(qTmax - qTmin);
+	double y = 1.;
+	if      ( type == kCalo ) y = caloResidualJEC[etaBin - 1];
+	else if ( type == kPF   ) y = pfResidualJEC[etaBin - 1];
+	else assert(0);
+	graphResidualJEC_vs_qT->SetPoint(qTbin - 1, x, y);
+	graphResidualJEC_vs_qT->SetPointEXhigh(qTbin - 1, xErr);
+	graphResidualJEC_vs_qT->SetPointEXlow(qTbin - 1, xErr);
+      }
     }
     
-    TF1* fitResidualCorr = new TF1("residualCorr","[0]", 5., 150.);
+    TF1* fitResidualCorr = new TF1("residualCorr","[0]", 5., 50.);
     TGraphAsymmErrors* graph_uParl_vs_qT_mc_div_data = compRatioGraph("uParl_vs_qT_mc_div_data", graph_uParl_vs_qT_mc_central, graph_uParl_vs_qT_data);    
     graph_uParl_vs_qT_mc_div_data->Fit(fitResidualCorr, "E");
-    std::cout << "eta = " << etaMin << ".." << etaMax << ": residual Corr. = " << fitResidualCorr->GetParameter(0) << " +/- " << fitResidualCorr->GetParError(0)
-	      <<" (JEC value = " << graphResidualJEC_vs_qT->GetY()[etaBin - 1] << ")" << std::endl;
+    std::cout << "eta = " << etaMin << ".." << etaMax << ": residual Corr. = " << fitResidualCorr->GetParameter(0) << " +/- " << fitResidualCorr->GetParError(0);
+    if ( graphResidualJEC_vs_qT ) std::cout <<" (JEC value = " << graphResidualJEC_vs_qT->GetY()[etaBin - 1] << ")";
+    std::cout << std::endl;
     residualCorrections.push_back(Form("%1.3f         %1.3f              3              3           3500        %1.5f        ", etaMin, etaMax, fitResidualCorr->GetParameter(0)));
+
+    double etaCenter = etaAxis->GetBinCenter(etaBin);
+    graph_Fit_vs_eta->SetPoint(etaBin - 1, etaCenter, fitResidualCorr->GetParameter(0));
+    graph_Fit_vs_eta->SetPointError(etaBin - 1, etaCenter - etaMin, etaMax - etaCenter, fitResidualCorr->GetParError(0), fitResidualCorr->GetParError(0));
 
     TString outputFileName = Form("plots/makeUnclusteredEnergyPlots_%s_uParl_vs_qT_for_eta%1.3fto%1.3f", type_string.data(), etaMin, etaMax);
     outputFileName.ReplaceAll(".", "_");
@@ -1111,13 +1151,47 @@ void makeUnclusteredEnergyPlots()
 	       graphResidualJEC_vs_qT, "Residual JEC",
 	       fitResidualCorr, "Fit",
 	       0., 300., 10, "q_{T} / GeV", 1.2,
-	       false, -0.05, 0.50, 0.5, 2., "<-u_{#parallel}>/q_{T}", 1.2, 
-	       0.61, 0.69, 
+	       false, -0.05, 0.50, 0., 2., "<-u_{#parallel}>/q_{T}", 1.2, 
+	       0.21, 0.69, 
 	       outputFileName.Data());
     
     delete graphResidualJEC_vs_qT;
     delete fitResidualCorr;
   }
+
+  TGraphAsymmErrors* graph_uParl_vs_eta_all_qT_data = makeGraph_mean_or_rms(
+    "uParl_vs_eta_all_qT_data",         
+    "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_data, histogram_qT_data, 1, qTnumBins, kMean, true,
+    histograms_uParl_proj_data);
+  TGraphAsymmErrors* graph_uParl_vs_eta_all_qT_mc_central = makeGraph_mean_or_rms(
+    "uParl_vs_eta_all_qT_mc_central",   
+    "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_mc_central, histogram_qT_mc_central, 1, qTnumBins, kMean, true,
+    histograms_uParl_proj_mc_central);
+  TGraphAsymmErrors* graph_uParl_vs_eta_all_qT_mc_shiftUp = makeGraph_mean_or_rms(
+    "uParl_vs_eta_all_qT_mc_shiftUp",   
+    "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_mc_shiftUp, histogram_qT_mc_shiftUp, 1, qTnumBins, kMean, true,
+    histograms_uParl_proj_mc_shiftUp);
+  TGraphAsymmErrors* graph_uParl_vs_eta_all_qT_mc_shiftDown = makeGraph_mean_or_rms(
+    "uParl_vs_eta_all_qT_mc_shiftDown", 
+    "u_{#parallel} vs #eta", histogram_uParl_vs_eta_vs_qT_mc_shiftDown, histogram_qT_mc_shiftDown, 1, qTnumBins, kMean, true,
+    histograms_uParl_proj_mc_shiftDown);
+
+  showGraphs(800, 900,
+	     graph_uParl_vs_eta_all_qT_data, "Data",
+	     graph_uParl_vs_eta_all_qT_mc_central, "Simulation",
+	     //graph_uParl_vs_eta_all_qT_mc_shiftUp, "Simulation +10%",
+	     //graph_uParl_vs_eta_all_qT_mc_shiftDown, "Simulation -10%",
+	     0, "",
+	     0, "",
+	     graph_Fit_vs_eta, "Fit",
+	     graphResidualJEC_vs_eta, "Residual JEC",
+	     0, "",
+	     -5.191, +5.191, 10, "#eta", 1.2,
+	     false, -0.05, 0.50, 0.5, 2., "<-u_{#parallel}>/q_{T}", 1.2, 
+	     0.21, 0.69, 
+	     Form("plots/makeUnclusteredEnergyPlots_%s_uParl_vs_eta_all_qT.png", type_string.data()));
+
+  delete graphResidualJEC_vs_eta;
 /*
   for ( int qTbin = 1; qTbin <= qTnumBins; ++qTbin ) {
     for ( int etaBin = 1; etaBin <= etaNumBins; ++etaBin ) {
@@ -1143,21 +1217,22 @@ void makeUnclusteredEnergyPlots()
 		       0, "",
 		       -(0.5*(qTmax + qTmin) + 75.0), +75.0, TMath::Nint((0.5*(qTmax + qTmin) + 2.*75.0)/2.5), "u_{#parallel} / GeV", 1.2,
 		       true, 1.e-6, 1.e+2, -0.50, +0.50, "a.u.", 1.2,
-		       0.61, 0.72, 
+		       0.21, 0.72, 
 		       outputFileName.Data());
     }
   }
  */
   showDistribution(800, 900,
 		   histogram_qT_data, "Data",
-		   histogram_qT_mc_central, "Simulation",
-		   0, "",
+		   histogram_qT_mc_central, "Simulation, w. q_{T} Reweighting",
+		   histogram_qT_mc_woQtReweighting, "Simulation, wo. q_{T} Reweighting",
+		   //0, "",
 		   0, "",
 		   0, "",
 		   0, "",
 		   0.0, 50.0, 100, "q_{T} / GeV", 1.2, 
 		   true, 1.e-6, 1.e+1, -0.10, +0.10, "a.u.", 1.2,
-		   0.61, 0.72, 
+		   0.21, 0.72, 
 		   Form("plots/makeUnclusteredEnergyPlots_%s_qT.png", type_string.data()));
 
   TGraphAsymmErrors* graph_qTmean_vs_qTbinCenter_data = new TGraphAsymmErrors(qTnumBins);
@@ -1206,29 +1281,54 @@ void makeUnclusteredEnergyPlots()
 	     0, "",
 	     0., 300., 10, "q_{T} / GeV", 1.2,
 	     false, 0.8, 1.7, 0.975, 1.025, "<q_{T}>/q_{T}^{bin-center}", 1.2, 
-	     0.61, 0.69, 
+	     0.21, 0.69, 
 	     outputFileName.Data());
 
   TH1* histogram_zVtx_data = getHistogram(inputFile, dqmDirectories["data"], "zVtx");
-  TH1* histogram_zVtx_mc_central = getHistogram(inputFile, dqmDirectories["mc_central"],      "zVtx");
+  TH1* histogram_zVtx_mc_central = getHistogram(inputFile, dqmDirectories["mc_central"], "zVtx");
+  TH1* histogram_zVtx_mc_woZvtxReweighting = getHistogram(inputFile, dqmDirectories["mc_woZvtxReweighting"], "zVtx");
   showDistribution(800, 900,
 		   histogram_zVtx_data, "Data",
 		   histogram_zVtx_mc_central, "Simulation",
+		   //histogram_zVtx_mc_woZvtxReweighting, "Simulation, wo. z_{vtx} Reweighting",
 		   0, "",
 		   0, "",
 		   0, "",
 		   0, "",
-		   -25.0, +25.0, 500, "z_{Vtx} / cm", 1.2, 
+		   -25.0, +25.0, 100, "z_{Vtx} / cm", 1.2, 
 		   true, 1.e-6, 1.e+1, -0.10, +0.10, "a.u.", 1.2,
-		   0.61, 0.72, 
+		   0.21, 0.72, 
 		   Form("plots/makeUnclusteredEnergyPlots_%s_zVtx.png", type_string.data()));
 
-  TFile* outputFile = new TFile("zVtxReweight_runs203894to208686_vs_Summer12mc.root", "RECREATE");
+  TH1* histogram_qT_forReweighting_data               = getHistogram(inputFile, dqmDirectories["data"], "qT_forReweighting");
+  TH1* histogram_qT_forReweighting_mc_central         = getHistogram(inputFile, dqmDirectories["mc_central"], "qT_forReweighting");
+  TH1* histogram_qT_forReweighting_mc_woQtReweighting = getHistogram(inputFile, dqmDirectories["mc_woQtReweighting"], "qT_forReweighting");
+  showDistribution(800, 900,
+		   histogram_qT_forReweighting_data, "Data",
+		   histogram_qT_forReweighting_mc_central, "Simulation, w. q_{T} Reweighting",
+		   histogram_qT_forReweighting_mc_woQtReweighting, "Simulation, wo. q_{T} Reweighting",
+		   //0, "",
+		   0, "",
+		   0, "",
+		   0, "",
+		   0., 300., -1, "q_{T} / GeV", 1.2, 
+		   true, 1.e-6, 1.e+1, -0.10, +0.10, "a.u.", 1.2,
+		   0.21, 0.69, 
+		   Form("plots/makeUnclusteredEnergyPlots_%s_qT_forReweighting.png", type_string.data()));
+
+  TFile* outputFile_zVtx = new TFile("unclEnCalibration_zVtxReweight_runs203894to208686_vs_Summer12mc.root", "RECREATE");
   histogram_zVtx_data->Scale(1./histogram_zVtx_data->Integral());
   histogram_zVtx_mc_central->Scale(1./histogram_zVtx_mc_central->Integral());
   TH1* histogram_zVtx_reweight = compRatioHistogram("zVtxReweight", histogram_zVtx_data, histogram_zVtx_mc_central, false);
   histogram_zVtx_reweight->Write();
-  delete outputFile;
+  delete outputFile_zVtx;
+
+  TFile* outputFile_qT = new TFile("unclEnCalibration_qTreweight.root", "RECREATE");
+  histogram_qT_forReweighting_data->Scale(1./histogram_qT_forReweighting_data->Integral());
+  histogram_qT_forReweighting_mc_central->Scale(1./histogram_qT_forReweighting_mc_central->Integral());
+  TH1* histogram_qT_forReweighting_reweight = compRatioHistogram("qTreweight", histogram_qT_forReweighting_data, histogram_qT_forReweighting_mc_central, false);
+  histogram_qT_forReweighting_reweight->Write();
+  delete outputFile_qT;
 
   std::ofstream* outputFile_txt = new std::ofstream(Form("unclEnResidualCorr_2012RunABCDruns190456to208686_%s.txt", type_string.data()), std::ios::out);
   for ( std::vector<std::string>::const_iterator line = residualCorrections.begin();
