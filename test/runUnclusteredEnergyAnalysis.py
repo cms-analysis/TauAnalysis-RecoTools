@@ -73,8 +73,9 @@ metTypes_MC = {
 configFile = 'FWLiteUnclusteredEnergyAnalyzer_cfg.py'
 executable_FWLiteUnclusteredEnergyAnalyzer = 'FWLiteUnclusteredEnergyAnalyzer'
 executable_hadd = 'hadd'
+executable_rm = 'rm'
 
-outputFilePath = "/data2/veelken/CMSSW_5_3_x/Ntuples/unclEnCalibration/%s" % version
+outputFilePath = "/data2/veelken/CMSSW_5_3_x/Ntuples/unclEnCalibration/plots/%s/" % version
 
 # create outputFilePath in case it does not yet exist
 def createFilePath_recursively(filePath):
@@ -106,22 +107,23 @@ def customizeConfigFile(sample, metType, version, shiftBy, type1JetPtThreshold, 
     cfg_modified = cfg_modified.replace("#sample#", "'%s'" % sample)
     cfg_modified = cfg_modified.replace("#metType#", "'%s'" % metType)
     cfg_modified = cfg_modified.replace("#version#", "'%s'" % version)
-    cfg_modified = cfg_modified.replace("#shiftBy#", "%1.1f" % shiftBy)
+    cfg_modified = cfg_modified.replace("#shiftBy#", "%1.2f" % shiftBy)
     cfg_modified = cfg_modified.replace("#type1JetPtThreshold#", "%1.1f" % type1JetPtThreshold)
     applyResidualCorr_string = None
     if applyResidualCorr:
         applyResidualCorr_string = "True"
     else:
         applyResidualCorr_string = "False"
-    cfg_modified = cfg_modified.replace("#applyResidualCorr#", "%s" % applyResidualCorr_string)   
+    cfg_modified = cfg_modified.replace("#applyResidualCorr#", "%s" % applyResidualCorr_string)
     cfg_modified = cfg_modified.replace("#outputFileName#", "'%s'" % outputFileName)
-   
+       
     cfgFile_modified = open(cfgFileName_modified, "w")
     cfgFile_modified.write(cfg_modified)
     cfgFile_modified.close()
 
 #--------------------------------------------------------------------------------
 # Build config files
+
 commandsToRun = {} # key = metType
 outputFileNames = {} # key = metType
 for sampleToAnalyze in samplesToAnalyze:
@@ -171,6 +173,7 @@ for sampleToAnalyze in samplesToAnalyze:
                     outputFileName = outputFileName[1:]
                 outputFileName = outputFileName.replace("_cfg.py", ".root")
                 outputFileName = outputFileName.replace("FWLiteUnclusteredEnergyAnalyzer", "UnclusteredEnergyAnalyzer")
+                outputFileName = os.path.join(outputFilePath, outputFileName)
                 print " outputFileName = '%s'" % outputFileName
 
                 customizeConfigFile(sampleToAnalyze, metType, version, shiftBy, type1JetPtThreshold, applyResidualCorr, outputFileName, cfgFileName_original, cfgFileName_modified)
@@ -180,7 +183,7 @@ for sampleToAnalyze in samplesToAnalyze:
                 
                 if not metType in commandsToRun.keys():
                     commandsToRun[metType] = []
-                command = 'nice 10 %s %s >&! %s' % (executable_FWLiteUnclusteredEnergyAnalyzer, cfgFileName_modified, logFileName)
+                command = 'nice %s %s >&! %s' % (executable_FWLiteUnclusteredEnergyAnalyzer, cfgFileName_modified, logFileName)
                 print "--> command = '%s'" % command
                 commandsToRun[metType].append(command)
 
@@ -197,12 +200,15 @@ def make_vstring(list_of_strings):
     return retVal
 
 for metType in outputFileNames.keys():
-    print "configuring '%s' for: metType = %s" % (executable_hadd, metType)
-    outputFileName_hadd = "UnclusteredEnergyAnalyzer_all_%s.root" % metType
+    print "configuring new '%s' for: metType = %s" % (executable_hadd, metType)
+    outputFileName_hadd = os.path.join(outputFilePath, "UnclusteredEnergyAnalyzer_all_%s.root" % metType)
+    command = '%s %s' % (executable_rm, outputFileName_hadd)
+    print "--> command = '%s'" % command
+    commandsToRun[metType].append(command)
     command = '%s %s %s' % (executable_hadd, outputFileName_hadd, make_vstring(outputFileNames[metType]))
     print "--> command = '%s'" % command
     commandsToRun[metType].append(command)
-
+   
 shellScriptName = os.path.join(configFilePath, "runUnclusteredEnergyAnalysis.sh")
 shellScript = open(shellScriptName, "w")
 shellScript.write("#!/bin/csh -f\n")
