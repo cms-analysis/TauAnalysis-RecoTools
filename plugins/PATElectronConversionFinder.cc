@@ -2,7 +2,7 @@
 // Original Author:  Konstantinos A. Petridis
 //         Created:  Wed Oct 15 21:33:34 CEST 2008
 //		Major re-write: Jeff Kolb, March 2011
-// $Id: PATElectronConversionFinder.cc,v 1.10 2011/04/07 09:44:50 jkolb Exp $
+// $Id: PATElectronConversionFinder.cc,v 1.11 2011/04/11 15:32:16 jkolb Exp $
 //
 //
 #include "RecoEgamma/EgammaTools/interface/ConversionFinder.h"
@@ -105,13 +105,13 @@ void PATElectronConversionFinderImp::select(const edm::Handle<collection>& elecs
                 // get dR between gsf electron and track
                 double dR = 1000;
                 // get z-component of dR between gsf electron and track
-                double dZ = 1000;
+                //double dZ = 1000;
                 // get cot(theta) of opening angle between gsf electron and track
                 double cotTheta = 1000;
 
                 dR = ROOT::Math::VectorUtil::DeltaR(trackCollection->at(trk).innerPosition(),
                         (*elec).gsfTrack()->innerPosition());
-                dZ = trackCollection->at(trk).innerPosition().z()-(*elec).gsfTrack()->innerPosition().z();
+                //dZ = trackCollection->at(trk).innerPosition().z()-(*elec).gsfTrack()->innerPosition().z();
                 cotTheta = 1./tan((*elec).gsfTrack()->innerMomentum().Theta())-1./tan(trackCollection->at(trk).innerMomentum().Theta());
 
                 // check if track satisfies conversion criteria

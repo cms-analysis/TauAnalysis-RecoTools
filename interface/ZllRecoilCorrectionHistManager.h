@@ -7,9 +7,9 @@
  *
  * \author Christian Veelken, UC Davis
  *
- * \version $Revision: 1.16 $
+ * \version $Revision: 1.17 $
  *
- * $Id: ZllRecoilCorrectionHistManager.h,v 1.16 2012/11/28 12:31:47 veelken Exp $
+ * $Id: ZllRecoilCorrectionHistManager.h,v 1.17 2012/11/28 12:35:23 veelken Exp $
  *
  */
 
@@ -42,11 +42,11 @@ class ZllRecoilCorrectionHistManager
 
   /// book and fill histograms
   void bookHistograms(TFileDirectory&);
-  void fillHistograms(const reco::CompositeCandidate&, const std::vector<pat::Muon>&, 
+  void fillHistograms(const reco::CompositeCandidate&, double, double, const std::vector<pat::Muon>&, 
 		      const std::vector<pat::Jet>&, const pat::MET&, const TMatrixD&,
-		      const reco::Candidate::LorentzVector&, const reco::Candidate::LorentzVector&, 
-		      const reco::Candidate::LorentzVector&,
-		      int, int, int, const reco::VertexCollection&, double, double);
+		      const reco::Candidate::LorentzVector&, const reco::Candidate::LorentzVector&, const reco::Candidate::LorentzVector&,
+		      double, double,
+		      int, int, int, const reco::VertexCollection&, double, double, double);
   
   /// scale all bin-contents/bin-errors by factor given as function argument
   /// (to account for events lost, due to aborted skimming/crab or PAT-tuple production/lxbatch jobs)
@@ -88,6 +88,17 @@ class ZllRecoilCorrectionHistManager
   TH1* histogramNumJetsCorrPtGt25_;
   TH1* histogramNumJetsRawPtGt30_;
   TH1* histogramNumJetsCorrPtGt30_;
+  TH1* histogramNumJetsRawPtGt40_;
+  TH1* histogramNumJetsCorrPtGt40_;
+
+  TH1* histogramJetEtaRawPtGt10_;
+  TH1* histogramJetEtaCorrPtGt10_;
+  TH1* histogramJetEtaRawPtGt20_;
+  TH1* histogramJetEtaCorrPtGt20_;
+  TH1* histogramJetEtaRawPtGt30_;
+  TH1* histogramJetEtaCorrPtGt30_;
+  TH1* histogramJetEtaRawPtGt40_;
+  TH1* histogramJetEtaCorrPtGt40_;
 
   TH1* histogramJetPtAbsEtaLt11_;
   TH1* histogramJetResAbsEtaLt11_;
@@ -97,7 +108,7 @@ class ZllRecoilCorrectionHistManager
   TH1* histogramJetResAbsEta17to23_;
   TH1* histogramJetPtAbsEtaGt23_;
   TH1* histogramJetResAbsEtaGt23_;
-
+  
   TH1* histogramNumBTagJetsCorrPtGt20_;
   TH1* histogramNumBTagJetsCorrPtGt30_;
   TH1* histogramNumBTagJetsCorrPtGt40_;
@@ -131,12 +142,33 @@ class ZllRecoilCorrectionHistManager
   TH1* histogramUperp_;
 
   TH2* histogramUparlDivQtVsQt_;
+  TH2* histogramUparlDivQtVsQt_zVtxLtM10_;
+  TH2* histogramUparlDivQtVsQt_zVtxM10toM5_;
+  TH2* histogramUparlDivQtVsQt_zVtxM5to0_;
+  TH2* histogramUparlDivQtVsQt_zVtx0toP5_;
+  TH2* histogramUparlDivQtVsQt_zVtxP5toP10_;
+  TH2* histogramUparlDivQtVsQt_zVtxGtP10_;
   TH2* histogramUparlVsQt_;
   TH2* histogramUperpDivQtVsQt_;
   TH2* histogramUperpVsQt_;
   TH1* histogramQt_;
+
   TH1* histogramSumEt_;
+  TH1* histogramSumEtPFChargedCand_;
+  TH1* histogramSumEtPFNeutralCand_;
+  TH1* histogramSumEtNumPUeq5_;
+  TH1* histogramSumEtNumPUeq10_;
+  TH1* histogramSumEtNumPUeq15_;
+  TH1* histogramSumEtNumPUeq20_;
+  TH1* histogramSumEtNumPUeq25_;
+  TH1* histogramSumEtNumPUeq30_;
   TH1* histogramSumEtExclMuons_;
+  TH1* histogramSumEtExclMuonsNumPUeq5_;
+  TH1* histogramSumEtExclMuonsNumPUeq10_;
+  TH1* histogramSumEtExclMuonsNumPUeq15_;
+  TH1* histogramSumEtExclMuonsNumPUeq20_;
+  TH1* histogramSumEtExclMuonsNumPUeq25_;
+  TH1* histogramSumEtExclMuonsNumPUeq30_;
 
   struct histogramsUvsQtNumObjType
   {
@@ -329,8 +361,14 @@ class ZllRecoilCorrectionHistManager
   TH1* histogramVtxZ_;
   TH1* histogramVtxRho_;
   TH1* histogramRhoNeutral_;
+  TH1* histogramRhoCharged_;
   
   std::vector<TH1*> histograms_;
+
+  int numWarnings_;
+  int maxWarnings_;
+
+  int verbosity_;
 };
 
 #endif

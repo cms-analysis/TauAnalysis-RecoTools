@@ -1,5 +1,8 @@
 #include "TauAnalysis/RecoTools/interface/ZllRecoilCorrectionHistManager.h"
 
+#include "FWCore/Utilities/interface/Exception.h"
+#include "FWCore/MessageLogger/interface/MessageLogger.h"
+
 #include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/Math/interface/deltaR.h"
 
@@ -12,8 +15,13 @@
 ZllRecoilCorrectionHistManager::ZllRecoilCorrectionHistManager(const edm::ParameterSet& cfg)
   : histogramsUvsQtLeadJetBarrel_(0),
     histogramsUvsQtLeadJetEndcap_(0),
-    histogramsUvsQtLeadJetForward_(0)
-{}
+    histogramsUvsQtLeadJetForward_(0),
+    numWarnings_(0),
+    maxWarnings_(3)
+{
+  verbosity_ = ( cfg.exists("verbosity") ) ?
+    cfg.getParameter<int>("verbosity") : 0;
+}
 
 ZllRecoilCorrectionHistManager::~ZllRecoilCorrectionHistManager()
 {
@@ -62,13 +70,24 @@ void ZllRecoilCorrectionHistManager::bookHistograms(TFileDirectory& dir)
   histogramNumJetsRawPtGt15_   = book1D(dir, "numJetsRawPtGt15",   "Num. Jets (P_{T}^{raw} > 15 GeV)",        50,         -0.5,         49.5);
   histogramNumJetsCorrPtGt15_  = book1D(dir, "numJetsCorrPtGt15",  "Num. Jets (P_{T}^{corr} > 15 GeV)",       20,         -0.5,         19.5);
   histogramNumJetsRawPtGt17_   = book1D(dir, "numJetsRawPtGt17",   "Num. Jets (P_{T}^{raw} > 17 GeV)",        50,         -0.5,         49.5);
-  histogramNumJetsCorrPtGt17_  = book1D(dir, "numJetsCorrPtGt17",  "Num. Jets (P_{T}^{corr} > 17 GeV)",       20,         -0.5,         19.5);
+  histogramNumJetsCorrPtGt17_  = book1D(dir, "numJetsCorrPtGt17",  "Num. Jets (P_{T}^{corr} > 17 GeV)",       20,         -0.5,         19.5);  
   histogramNumJetsRawPtGt20_   = book1D(dir, "numJetsRawPtGt20",   "Num. Jets (P_{T}^{raw} > 20 GeV)",        50,         -0.5,         49.5);
   histogramNumJetsCorrPtGt20_  = book1D(dir, "numJetsCorrPtGt20",  "Num. Jets (P_{T}^{corr} > 20 GeV)",       20,         -0.5,         19.5);
   histogramNumJetsRawPtGt25_   = book1D(dir, "numJetsRawPtGt25",   "Num. Jets (P_{T}^{raw} > 25 GeV)",        50,         -0.5,         49.5);
   histogramNumJetsCorrPtGt25_  = book1D(dir, "numJetsCorrPtGt25",  "Num. Jets (P_{T}^{corr} > 25 GeV)",       20,         -0.5,         19.5);
   histogramNumJetsRawPtGt30_   = book1D(dir, "numJetsRawPtGt30",   "Num. Jets (P_{T}^{raw} > 30 GeV)",        50,         -0.5,         49.5);
   histogramNumJetsCorrPtGt30_  = book1D(dir, "numJetsCorrPtGt30",  "Num. Jets (P_{T}^{corr} > 30 GeV)",       20,         -0.5,         19.5);
+  histogramNumJetsRawPtGt40_   = book1D(dir, "numJetsRawPtGt40",   "Num. Jets (P_{T}^{raw} > 40 GeV)",        50,         -0.5,         49.5);
+  histogramNumJetsCorrPtGt40_  = book1D(dir, "numJetsCorrPtGt40",  "Num. Jets (P_{T}^{corr} > 40 GeV)",       20,         -0.5,         19.5);
+
+  histogramJetEtaRawPtGt10_    = book1D(dir, "jetEtaRawPtGt10",    "#eta_{jet} (P_{T}^{raw} > 10 GeV)",      198,         -9.9,         +9.9);
+  histogramJetEtaCorrPtGt10_   = book1D(dir, "jetEtaCorrPtGt10",   "#eta_{jet} (P_{T}^{corr} > 10 GeV)",     198,         -9.9,         +9.9);
+  histogramJetEtaRawPtGt20_    = book1D(dir, "jetEtaRawPtGt20",    "#eta_{jet} (P_{T}^{raw} > 20 GeV)",      198,         -9.9,         +9.9);
+  histogramJetEtaCorrPtGt20_   = book1D(dir, "jetEtaCorrPtGt20",   "#eta_{jet} (P_{T}^{corr} > 20 GeV)",     198,         -9.9,         +9.9);
+  histogramJetEtaRawPtGt30_    = book1D(dir, "jetEtaRawPtGt30",    "#eta_{jet} (P_{T}^{raw} > 30 GeV)",      198,         -9.9,         +9.9);
+  histogramJetEtaCorrPtGt30_   = book1D(dir, "jetEtaCorrPtGt30",   "#eta_{jet} (P_{T}^{corr} > 30 GeV)",     198,         -9.9,         +9.9);
+  histogramJetEtaRawPtGt40_    = book1D(dir, "jetEtaRawPtGt40",    "#eta_{jet} (P_{T}^{raw} > 40 GeV)",      198,         -9.9,         +9.9);
+  histogramJetEtaCorrPtGt40_   = book1D(dir, "jetEtaCorrPtGt40",   "#eta_{jet} (P_{T}^{corr} > 40 GeV)",     198,         -9.9,         +9.9);
 
   histogramJetPtAbsEtaLt11_    = book1D(dir, "jetPtAbsEtaLt11",    "P_{T}^{jet} (|#eta_{jet}| < 1.1)",       100,          0. ,         250.);
   histogramJetResAbsEtaLt11_   = book1D(dir, "jetResAbsEtaLt11",   "Jet res. (|#eta_{jet}| < 1.1)",           40,         -1. ,         +1.);
@@ -134,6 +153,18 @@ void ZllRecoilCorrectionHistManager::bookHistograms(TFileDirectory& dir)
 
   histogramUparlDivQtVsQt_ = book2D(dir, "uParlDivQtVsQt", "u_{#parallel}/q_{T} vs q_{T}",                           
 				    qTnumBins, qTbinning, 400,  -5.0,   +5.0);
+  histogramUparlDivQtVsQt_zVtxLtM10_   = book2D(dir, "uParlDivQtVsQt_zVtxLtM10", "u_{#parallel}/q_{T} vs q_{T} (z_{vtx} < -10 cm)",                           
+						qTnumBins, qTbinning, 400,  -5.0,   +5.0);
+  histogramUparlDivQtVsQt_zVtxM10toM5_ = book2D(dir, "uParlDivQtVsQt_zVtxM10toM5", "u_{#parallel}/q_{T} vs q_{T} (-10 < z_{vtx} < -5 cm)",                           
+						qTnumBins, qTbinning, 400,  -5.0,   +5.0);
+  histogramUparlDivQtVsQt_zVtxM5to0_   = book2D(dir, "uParlDivQtVsQt_zVtxM5to0", "u_{#parallel}/q_{T} vs q_{T} (-5 < z_{vtx} < 0 cm)",                           
+						qTnumBins, qTbinning, 400,  -5.0,   +5.0);
+  histogramUparlDivQtVsQt_zVtx0toP5_   = book2D(dir, "uParlDivQtVsQt_zVtx0toP5", "u_{#parallel}/q_{T} vs q_{T} (0 < z_{vtx} < +5 cm)",                           
+						qTnumBins, qTbinning, 400,  -5.0,   +5.0);
+  histogramUparlDivQtVsQt_zVtxP5toP10_ = book2D(dir, "uParlDivQtVsQt_zVtxP5toP10", "u_{#parallel}/q_{T} vs q_{T} (+5 < z_{vtx} < +10 cm)",                           
+						qTnumBins, qTbinning, 400,  -5.0,   +5.0); 
+  histogramUparlDivQtVsQt_zVtxGtP10_   = book2D(dir, "uParlDivQtVsQt_zVtxGtP10", "u_{#parallel}/q_{T} vs q_{T} (z_{vtx} > +10 cm)",                           
+						qTnumBins, qTbinning, 400,  -5.0,   +5.0);
   histogramUparlVsQt_      = book2D(dir, "uParlVsQt",      "u_{#parallel} vs q_{T}",                           
 				    qTnumBins, qTbinning, 230, -500.0,  +75.0);
   histogramUperpDivQtVsQt_ = book2D(dir, "uPerpDivQtVsQt", "u_{#perp}/q_{T} vs q_{T}",                           
@@ -142,11 +173,40 @@ void ZllRecoilCorrectionHistManager::bookHistograms(TFileDirectory& dir)
 				    qTnumBins, qTbinning,  60, -75.0,  +75.0);
   histogramQt_             = book1D(dir, "qT",             "q_{T}",  
 				    600, 0., 300.);
-  histogramSumEt_          = book1D(dir, "sumEt",          "#Sigma E_{T}",  
-				    600, 0., 3000.);
-  histogramSumEtExclMuons_ = book1D(dir, "sumEtExclMuons", "#Sigma E_{T} (excl. Muons)",  
-				    600, 0., 3000.);
-  
+
+  histogramSumEt_                   = book1D(dir, "sumEt",                  "#Sigma E_{T}",  
+					     600, 0., 3000.);
+  histogramSumEtPFChargedCand_      = book1D(dir, "sumEtPFChargedCand",     "#Sigma E_{T} (charged)",  
+					     600, 0., 3000.);
+  histogramSumEtPFNeutralCand_      = book1D(dir, "sumEtPFNeutralCand",     "#Sigma E_{T} (neutral)",  
+					     600, 0., 3000.);
+  histogramSumEtNumPUeq5_           = book1D(dir, "sumEtNumPUeq5",          "#Sigma E_{T}",  
+					     600, 0., 3000.);
+  histogramSumEtNumPUeq10_          = book1D(dir, "sumEtNumPUeq10",         "#Sigma E_{T}",  
+					     600, 0., 3000.);
+  histogramSumEtNumPUeq15_          = book1D(dir, "sumEtNumPUeq15",         "#Sigma E_{T}",  
+					     600, 0., 3000.);
+  histogramSumEtNumPUeq20_          = book1D(dir, "sumEtNumPUeq20",         "#Sigma E_{T}",  
+					     600, 0., 3000.);
+  histogramSumEtNumPUeq25_          = book1D(dir, "sumEtNumPUeq25",         "#Sigma E_{T}",  
+					     600, 0., 3000.);
+  histogramSumEtNumPUeq30_          = book1D(dir, "sumEtNumPUeq30",         "#Sigma E_{T}",  
+					     600, 0., 3000.);
+  histogramSumEtExclMuons_          = book1D(dir, "sumEtExclMuons",         "#Sigma E_{T} (excl. Muons)",  
+					     600, 0., 3000.);
+  histogramSumEtExclMuonsNumPUeq5_  = book1D(dir, "sumEtExclMuonsNumPUeq5", "#Sigma E_{T} (excl. Muons)",  
+					     600, 0., 3000.);
+  histogramSumEtExclMuonsNumPUeq10_ = book1D(dir, "sumEtExclMuonsNumPUeq10", "#Sigma E_{T} (excl. Muons)",  
+					     600, 0., 3000.);
+  histogramSumEtExclMuonsNumPUeq15_ = book1D(dir, "sumEtExclMuonsNumPUeq15","#Sigma E_{T} (excl. Muons)",  
+					     600, 0., 3000.);
+  histogramSumEtExclMuonsNumPUeq20_ = book1D(dir, "sumEtExclMuonsNumPUeq20","#Sigma E_{T} (excl. Muons)",  
+					     600, 0., 3000.);
+  histogramSumEtExclMuonsNumPUeq25_ = book1D(dir, "sumEtExclMuonsNumPUeq25","#Sigma E_{T} (excl. Muons)",  
+					     600, 0., 3000.);
+  histogramSumEtExclMuonsNumPUeq30_ = book1D(dir, "sumEtExclMuonsNumPUeq30","#Sigma E_{T} (excl. Muons)",  
+					     600, 0., 3000.);
+
   histogramsUvsQtNumVtxBinned_.push_back(
     new histogramsUvsQtNumObjType(this, dir, qTnumBins, qTbinning, "NumVertices", -1,  2));
   histogramsUvsQtNumVtxBinned_.push_back(
@@ -213,15 +273,16 @@ void ZllRecoilCorrectionHistManager::bookHistograms(TFileDirectory& dir)
   histogramVtxZ_             = book1D(dir, "vertexZ",            "z_{vtx}",                                  100,        -25.,         +25.);
   histogramVtxRho_           = book1D(dir, "vertexRho",          "#rho_{vtx}",                               100,         -2.5,         +2.5);
   histogramRhoNeutral_       = book1D(dir, "rhoNeutral",         "#rho_{neutral}",                            50,          0. ,          12.);
+  histogramRhoCharged_       = book1D(dir, "rhoCharged",         "#rho_{charged}",                            50,          0. ,          12.);
 }
 
 void ZllRecoilCorrectionHistManager::fillHistograms(
-       const reco::CompositeCandidate& ZllCand, const std::vector<pat::Muon>& muons, 
+       const reco::CompositeCandidate& ZllCand, double qX, double qY, const std::vector<pat::Muon>& muons, 
        const std::vector<pat::Jet>& jets, const pat::MET& met, const TMatrixD& metCov,
-       const reco::Candidate::LorentzVector& p4PFChargedHadrons, const reco::Candidate::LorentzVector& p4PFNeutralHadrons, 
-       const reco::Candidate::LorentzVector& p4PFGammas, 
+       const reco::Candidate::LorentzVector& p4PFChargedHadrons, const reco::Candidate::LorentzVector& p4PFNeutralHadrons, const reco::Candidate::LorentzVector& p4PFGammas, 
+       double sumEtPFChargedCand, double sumEtPFNeutralCand,
        int numPU_bxMinus1, int numPU_bx0, int numPU_bxPlus1, 
-       const reco::VertexCollection& vertices, double rhoNeutral, double evtWeight)
+       const reco::VertexCollection& vertices, double rhoNeutral, double rhoCharged, double evtWeight)
 {
   assert(ZllCand.numberOfDaughters() == 2);
 
@@ -257,13 +318,15 @@ void ZllRecoilCorrectionHistManager::fillHistograms(
   int numJetsRawPtGt15 = 0;
   int numJetsCorrPtGt15 = 0;
   int numJetsRawPtGt17 = 0;
-  int numJetsCorrPtGt17 = 0;
+  int numJetsCorrPtGt17 = 0; 
   int numJetsRawPtGt20 = 0;
   int numJetsCorrPtGt20 = 0;
   int numJetsRawPtGt25 = 0;
   int numJetsCorrPtGt25 = 0;
   int numJetsRawPtGt30 = 0;
   int numJetsCorrPtGt30 = 0;
+  int numJetsRawPtGt40 = 0;
+  int numJetsCorrPtGt40 = 0;
 
   int numBTagJetsCorrPtGt20 = 0;
   int numBTagJetsCorrPtGt30 = 0;
@@ -271,6 +334,8 @@ void ZllRecoilCorrectionHistManager::fillHistograms(
   const std::string bTagDiscr = "trackCountingHighEffBJetTags";
   double bTagDiscr_cut = 3.3;
     
+  std::vector<const pat::Jet*> jets_woMuons;
+
   for ( std::vector<pat::Jet>::const_iterator jet = jets.begin();
 	jet != jets.end(); ++jet ) {
     bool isMuonOverlap = false;
@@ -279,8 +344,11 @@ void ZllRecoilCorrectionHistManager::fillHistograms(
       if ( deltaR(jet->p4(), muon->p4()) < 0.5 ) isMuonOverlap = true;
     }
     if ( isMuonOverlap ) continue;
+    jets_woMuons.push_back(&(*jet));
 
     reco::Candidate::LorentzVector rawJetP4 = jet->correctedP4("Uncorrected");
+    reco::Candidate::LorentzVector corrJetP4 = jet->p4();
+
     if ( rawJetP4.pt() > 10. ) ++numJetsRawPtGt10;
     if ( rawJetP4.pt() > 12. ) ++numJetsRawPtGt12;
     if ( rawJetP4.pt() > 15. ) ++numJetsRawPtGt15;
@@ -288,43 +356,60 @@ void ZllRecoilCorrectionHistManager::fillHistograms(
     if ( rawJetP4.pt() > 20. ) ++numJetsRawPtGt20;
     if ( rawJetP4.pt() > 25. ) ++numJetsRawPtGt25;
     if ( rawJetP4.pt() > 30. ) ++numJetsRawPtGt30;
+    if ( rawJetP4.pt() > 40. ) ++numJetsRawPtGt40;
+
+    if ( corrJetP4.pt() > 10. ) ++numJetsCorrPtGt10;
+    if ( corrJetP4.pt() > 12. ) ++numJetsCorrPtGt12;
+    if ( corrJetP4.pt() > 15. ) ++numJetsCorrPtGt15;
+    if ( corrJetP4.pt() > 17. ) ++numJetsCorrPtGt17;
+    if ( corrJetP4.pt() > 20. ) ++numJetsCorrPtGt20;
+    if ( corrJetP4.pt() > 25. ) ++numJetsCorrPtGt25;
+    if ( corrJetP4.pt() > 30. ) ++numJetsCorrPtGt30;
+    if ( corrJetP4.pt() > 40. ) ++numJetsCorrPtGt40;
     
-    reco::Candidate::LorentzVector corrJetP4 = jet->p4();
+    if ( jet->bDiscriminator(bTagDiscr.data()) > bTagDiscr_cut ) {
+      if ( corrJetP4.pt() > 20. ) ++numBTagJetsCorrPtGt20;
+      if ( corrJetP4.pt() > 30. ) ++numBTagJetsCorrPtGt30;
+      if ( corrJetP4.pt() > 40. ) ++numBTagJetsCorrPtGt40;
+    }
+
+    if ( rawJetP4.pt() > 10. ) histogramJetEtaRawPtGt10_->Fill(jet->eta(), evtWeight);
+    if ( rawJetP4.pt() > 20. ) histogramJetEtaRawPtGt20_->Fill(jet->eta(), evtWeight);
+    if ( rawJetP4.pt() > 30. ) histogramJetEtaRawPtGt30_->Fill(jet->eta(), evtWeight);
+    if ( rawJetP4.pt() > 40. ) histogramJetEtaRawPtGt40_->Fill(jet->eta(), evtWeight);
+    
+    if ( corrJetP4.pt() > 10. ) histogramJetEtaCorrPtGt10_->Fill(jet->eta(), evtWeight);
+    if ( corrJetP4.pt() > 20. ) histogramJetEtaCorrPtGt20_->Fill(jet->eta(), evtWeight);
+    if ( corrJetP4.pt() > 30. ) histogramJetEtaCorrPtGt30_->Fill(jet->eta(), evtWeight);
+    if ( corrJetP4.pt() > 40. ) histogramJetEtaCorrPtGt40_->Fill(jet->eta(), evtWeight);
+    
     // CV: require pseudo-rapidity of "raw" and corrected jet to match,
     //     in order to avoid problem with "unphysical" corrected jets of negative energy
     //     for which the energy becomes positive and the sign of eta "flips"
     //    (cf. https://hypernews.cern.ch/HyperNews/CMS/get/JetMET/1311/1.html)
-    if ( TMath::Abs(rawJetP4.eta() - corrJetP4.eta()) < 0.1 ) {
-      
+    if ( TMath::Abs(rawJetP4.eta() - corrJetP4.eta()) < 0.1 ) {      
       if      ( TMath::Abs(jet->eta()) < 1.1 ) histogramJetPtAbsEtaLt11_->Fill(jet->pt(), evtWeight);
       else if ( TMath::Abs(jet->eta()) < 1.7 ) histogramJetPtAbsEta11to17_->Fill(jet->pt(), evtWeight);
       else if ( TMath::Abs(jet->eta()) < 2.3 ) histogramJetPtAbsEta17to23_->Fill(jet->pt(), evtWeight);
       else                                     histogramJetPtAbsEtaGt23_->Fill(jet->pt(), evtWeight);
-      
-      if ( jet->genJet() && jet->genJet()->pt() > 0. ) {
-	double jetRes = (jet->pt() - jet->genJet()->pt())/jet->genJet()->pt();
-	if      ( TMath::Abs(jet->eta()) < 1.1 ) histogramJetResAbsEtaLt11_->Fill(jetRes, evtWeight);
-	else if ( TMath::Abs(jet->eta()) < 1.7 ) histogramJetResAbsEta11to17_->Fill(jetRes, evtWeight);
-	else if ( TMath::Abs(jet->eta()) < 2.3 ) histogramJetResAbsEta17to23_->Fill(jetRes, evtWeight);
-	else                                     histogramJetResAbsEtaGt23_->Fill(jetRes, evtWeight);
-      }
-      
-      if ( corrJetP4.pt() > 10. ) ++numJetsCorrPtGt10;
-      if ( corrJetP4.pt() > 12. ) ++numJetsCorrPtGt12;
-      if ( corrJetP4.pt() > 15. ) ++numJetsCorrPtGt15;
-      if ( corrJetP4.pt() > 17. ) ++numJetsCorrPtGt17;
-      if ( corrJetP4.pt() > 20. ) ++numJetsCorrPtGt20;
-      if ( corrJetP4.pt() > 25. ) ++numJetsCorrPtGt25;
-      if ( corrJetP4.pt() > 30. ) ++numJetsCorrPtGt30;
-      
-      if ( jet->bDiscriminator(bTagDiscr.data()) > bTagDiscr_cut ) {
-	if ( corrJetP4.pt() > 20. ) ++numBTagJetsCorrPtGt20;
-	if ( corrJetP4.pt() > 30. ) ++numBTagJetsCorrPtGt30;
-	if ( corrJetP4.pt() > 40. ) ++numBTagJetsCorrPtGt40;
+      try { 
+	if ( jet->genJet() && jet->genJet()->pt() > 0. ) {
+	  double jetRes = (jet->pt() - jet->genJet()->pt())/jet->genJet()->pt();
+	  if      ( TMath::Abs(jet->eta()) < 1.1 ) histogramJetResAbsEtaLt11_->Fill(jetRes, evtWeight);
+	  else if ( TMath::Abs(jet->eta()) < 1.7 ) histogramJetResAbsEta11to17_->Fill(jetRes, evtWeight);
+	  else if ( TMath::Abs(jet->eta()) < 2.3 ) histogramJetResAbsEta17to23_->Fill(jetRes, evtWeight);
+	  else                                     histogramJetResAbsEtaGt23_->Fill(jetRes, evtWeight);
+	}  
+      } catch ( ... ) { 
+	if ( numWarnings_ < maxWarnings_ ) {
+	  edm::LogWarning("ObjValEDNtupleProducer::produce")
+	    << " Failed to access genJet collection --> Jet resolution histogram will NOT be filled !!" << std::endl;
+	  ++numWarnings_;
+	}
       }
     }
   }
-
+  
   //std::cout << " numJetsRawPtGt10 = " << numJetsRawPtGt10 << std::endl;
   //std::cout << " numJetsCorrPtGt10 = " << numJetsCorrPtGt10 << std::endl;
 
@@ -335,6 +420,7 @@ void ZllRecoilCorrectionHistManager::fillHistograms(
   histogramNumJetsRawPtGt20_->Fill(numJetsRawPtGt20, evtWeight);
   histogramNumJetsRawPtGt25_->Fill(numJetsRawPtGt25, evtWeight);
   histogramNumJetsRawPtGt30_->Fill(numJetsRawPtGt30, evtWeight);
+  histogramNumJetsRawPtGt40_->Fill(numJetsRawPtGt40, evtWeight);
   histogramNumJetsCorrPtGt10_->Fill(numJetsCorrPtGt10, evtWeight);
   histogramNumJetsCorrPtGt12_->Fill(numJetsCorrPtGt12, evtWeight);
   histogramNumJetsCorrPtGt15_->Fill(numJetsCorrPtGt15, evtWeight);
@@ -342,6 +428,7 @@ void ZllRecoilCorrectionHistManager::fillHistograms(
   histogramNumJetsCorrPtGt20_->Fill(numJetsCorrPtGt20, evtWeight);
   histogramNumJetsCorrPtGt25_->Fill(numJetsCorrPtGt25, evtWeight);
   histogramNumJetsCorrPtGt30_->Fill(numJetsCorrPtGt30, evtWeight);
+  histogramNumJetsCorrPtGt40_->Fill(numJetsCorrPtGt40, evtWeight);
 
   histogramNumBTagJetsCorrPtGt20_->Fill(numBTagJetsCorrPtGt20, evtWeight);
   histogramNumBTagJetsCorrPtGt30_->Fill(numBTagJetsCorrPtGt30, evtWeight);
@@ -353,9 +440,7 @@ void ZllRecoilCorrectionHistManager::fillHistograms(
 
   if ( ZllCand.mass() > 76. && ZllCand.mass() < 106. && numBTagJetsCorrPtGt30 == 0 ) { // cuts to suppress TTbar background
     
-    double qT = ZllCand.pt();
-    double qX = ZllCand.px();
-    double qY = ZllCand.py();
+    double qT = TMath::Sqrt(qX*qX + qY*qY);
     
     double metPx = met.px();
     double metPy = met.py();
@@ -394,21 +479,59 @@ void ZllRecoilCorrectionHistManager::fillHistograms(
     }
 
     int errorFlag = 0;
-    std::pair<double, double> uT = compMEtProjU(ZllCand.p4(), met.px(), met.py(), errorFlag);
+    reco::Candidate::LorentzVector uP4(qX, qY, 0., qT);
+    std::pair<double, double> uT = compMEtProjU(uP4, met.px(), met.py(), errorFlag);
     if ( !errorFlag ) {
       double uParl = uT.first;
       double uPerp = uT.second;
+      if ( verbosity_ ) {
+	std::cout << "qT = " << qT << " (qX = " << qX << ", qY = " << qY << "):" 
+		  << " uParl = " << uParl << ", uPerp = " << uPerp << " (uPx = " << -(met.px() + qX) << ", uPy = " << -(met.py() + qY) << ")" << std::endl;
+      }
 
       histogramUparl_->Fill(uParl, evtWeight);
       histogramUperp_->Fill(uPerp, evtWeight);
 
-      if ( qT > 0. ) histogramUparlDivQtVsQt_->Fill(qT, uParl/qT, evtWeight);
+      if ( qT > 0. ) {
+	histogramUparlDivQtVsQt_->Fill(qT, uParl/qT, evtWeight);
+	if ( vertices.size() >= 1 ) {
+	  double zVertex = vertices.front().z();
+	  if      ( zVertex < -10. ) histogramUparlDivQtVsQt_zVtxLtM10_->Fill(qT, uParl/qT, evtWeight);
+	  else if ( zVertex <  -5. ) histogramUparlDivQtVsQt_zVtxM10toM5_->Fill(qT, uParl/qT, evtWeight);
+	  else if ( zVertex <   0. ) histogramUparlDivQtVsQt_zVtxM5to0_->Fill(qT, uParl/qT, evtWeight);
+	  else if ( zVertex <  +5. ) histogramUparlDivQtVsQt_zVtx0toP5_->Fill(qT, uParl/qT, evtWeight);
+	  else if ( zVertex < +10. ) histogramUparlDivQtVsQt_zVtxP5toP10_->Fill(qT, uParl/qT, evtWeight);
+	  else                       histogramUparlDivQtVsQt_zVtxGtP10_->Fill(qT, uParl/qT, evtWeight);
+	}
+      }
       histogramUparlVsQt_->Fill(qT, uParl, evtWeight);
       if ( qT > 0. ) histogramUperpDivQtVsQt_->Fill(qT, uPerp/qT, evtWeight);
       histogramUperpVsQt_->Fill(qT, uPerp, evtWeight);
       histogramQt_->Fill(qT, evtWeight);
+
       histogramSumEt_->Fill(sumEt, evtWeight);
+      histogramSumEtPFChargedCand_->Fill(sumEtPFChargedCand, evtWeight);
+      histogramSumEtPFNeutralCand_->Fill(sumEtPFNeutralCand, evtWeight);
       histogramSumEtExclMuons_->Fill(sumEt_exclMuons, evtWeight);
+      if        ( numPU_bxMinus1 ==  5 && numPU_bx0 ==  5 && numPU_bxPlus1 ==  5 ) {
+	histogramSumEtNumPUeq5_->Fill(sumEt, evtWeight);
+	histogramSumEtExclMuonsNumPUeq5_->Fill(sumEt_exclMuons, evtWeight);
+      } else if ( numPU_bxMinus1 == 10 && numPU_bx0 == 10 && numPU_bxPlus1 == 10 ) {
+	histogramSumEtNumPUeq10_->Fill(sumEt, evtWeight);
+	histogramSumEtExclMuonsNumPUeq10_->Fill(sumEt_exclMuons, evtWeight);
+      } else if ( numPU_bxMinus1 == 15 && numPU_bx0 == 15 && numPU_bxPlus1 == 15 ) {
+	histogramSumEtNumPUeq15_->Fill(sumEt, evtWeight);
+	histogramSumEtExclMuonsNumPUeq15_->Fill(sumEt_exclMuons, evtWeight);
+      } else if ( numPU_bxMinus1 == 20 && numPU_bx0 == 20 && numPU_bxPlus1 == 20 ) {
+	histogramSumEtNumPUeq20_->Fill(sumEt, evtWeight);
+	histogramSumEtExclMuonsNumPUeq20_->Fill(sumEt_exclMuons, evtWeight);
+      } else if ( numPU_bxMinus1 == 25 && numPU_bx0 == 25 && numPU_bxPlus1 == 25 ) {
+	histogramSumEtNumPUeq25_->Fill(sumEt, evtWeight);
+	histogramSumEtExclMuonsNumPUeq25_->Fill(sumEt_exclMuons, evtWeight);
+      } else if ( numPU_bxMinus1 == 30 && numPU_bx0 == 30 && numPU_bxPlus1 == 30 ) {
+	histogramSumEtNumPUeq30_->Fill(sumEt, evtWeight);
+	histogramSumEtExclMuonsNumPUeq30_->Fill(sumEt_exclMuons, evtWeight);
+      } 
                  
       reco::Candidate::LorentzVector met_rotated = compP4inZetaFrame(met.p4(), ZllCand.phi());
       double metParl = met_rotated.px();
@@ -516,6 +639,7 @@ void ZllRecoilCorrectionHistManager::fillHistograms(
     histogramVtxRho_->Fill(vertex->position().Rho(), evtWeight);
   }
   histogramRhoNeutral_->Fill(rhoNeutral, evtWeight);
+  histogramRhoCharged_->Fill(rhoCharged, evtWeight);
 }
 
 void ZllRecoilCorrectionHistManager::scaleHistograms(double factor)

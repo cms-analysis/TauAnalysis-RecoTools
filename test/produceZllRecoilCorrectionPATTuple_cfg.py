@@ -14,12 +14,8 @@ process.load('Configuration/StandardSequences/FrontierConditions_GlobalTag_cff')
 #--------------------------------------------------------------------------------
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
-        'file:/data1/veelken/CMSSW_5_3_x/skims/goldenZmumuEvents_ZplusJets_madgraph_RECO_205_1_XhE.root',
-        ##'file:/data1/veelken/CMSSW_5_3_x/skims/goldenZmumuEvents_Data_runs203894to208686_2013Feb14_AOD_9_1_FEU.root'
-        #'file:/afs/cern.ch/user/m/mmarionn/public/forChristian/pickevents_1.root',
-        #'file:/afs/cern.ch/user/m/mmarionn/public/forChristian/pickevents_2.root',
-        #'file:/afs/cern.ch/user/m/mmarionn/public/forChristian/pickevents_3.root',
-        #'file:/afs/cern.ch/user/m/mmarionn/public/forChristian/pickevents_4.root'                                
+        'file:/data1/veelken/CMSSW_5_3_x/skims/goldenZmumuEvents_ZplusJets_madgraph_2013Feb14_AOD_99_0_MvW.root'
+        ##'file:/data1/veelken/CMSSW_5_3_x/skims/goldenZmumuEvents_Data_runs203894to208686_2013Feb14_AOD_12_2_KCO.root'
     ),
     ##eventsToProcess = cms.untracked.VEventRange(
     ##    '1:78674:31444716',
@@ -39,8 +35,8 @@ isMC = True # use for MC
 ##isMC = False # use for Data
 ##HLTprocessName = "HLT" # use for 2012 Data
 HLTprocessName = "HLT" # use for Spring'12 MC
-#type1JetPtThreshold = 20.0 # increased jet Pt threshold to reduce sensitivity of Type 1 corrected MET to pile-up
-type1JetPtThreshold = 10.0 # current default value recommended by JetMET POG
+type1JetPtThreshold = 20.0 # increased jet Pt threshold to reduce sensitivity of Type 1 corrected MET to pile-up
+##type1JetPtThreshold = 10.0 # current default value recommended by JetMET POG
 #jecUncertaintyTag = "Total"
 #jecUncertaintyTag = "SubTotalDataMC"
 jecUncertaintyTag = "SubTotalMC"
@@ -53,9 +49,9 @@ applyUnclEnergyResidualCorr = True
 #--------------------------------------------------------------------------------
 # define GlobalTag to be used for event reconstruction
 if isMC:
-    process.GlobalTag.globaltag = cms.string('START53_V15::All')
+    process.GlobalTag.globaltag = cms.string('START53_V22::All')
 else:
-    process.GlobalTag.globaltag = cms.string('GR_P_V42_AN3::All')
+    process.GlobalTag.globaltag = cms.string('FT_53_V21_AN4::All')
 #--------------------------------------------------------------------------------
 
 #--------------------------------------------------------------------------------
@@ -352,6 +348,11 @@ process.cleanPatCandidates.remove(process.cleanPatPhotons)
 process.patDefaultSequence.remove(process.selectedPatCandidates)
 process.patDefaultSequence.remove(process.cleanPatCandidates)
 process.patDefaultSequence.remove(process.countPatCandidates)
+# CV: disable pat::Tau sequences
+#     to avoid exceptions due to change in tau data-formats
+process.patDefaultSequence.remove(process.makePatTaus)
+
+process.patCandidateSummary.candidates = cms.VInputTag(cms.InputTag("patMuons"), cms.InputTag("patJets"), cms.InputTag("patMETs"))
 
 process.patMuons.muonSource = cms.InputTag('goodMuons')
 
@@ -374,10 +375,11 @@ process.patDefaultSequence += process.patIsoMuons
 # configure pat::Jet production
 # (enable L2L3Residual corrections in case running on Data)
 process.load("JetMETCorrections.Configuration.JetCorrectionServices_cff")
-##process.load("JetMETCorrections.Configuration.JetCorrectionProducers_cff")
-jetCorrections = [ 'L1FastJet', 'L2Relative', 'L3Absolute' ]
+pfJetCorrections = [ 'L1FastJet', 'L2Relative', 'L3Absolute' ]
+caloJetCorrections = [ 'L1Offset', 'L2Relative', 'L3Absolute' ]
 if not isMC:
-    jetCorrections.append('L2L3Residual')
+    pfJetCorrections.append('L2L3Residual')
+    caloJetCorrections.append('L2L3Residual')
 
 from PhysicsTools.PatAlgos.tools.jetTools import *
 addJetCollection(
@@ -387,7 +389,7 @@ addJetCollection(
     typeLabel = "PFchs",
     doJTA = True,
     doBTagging = True,
-    jetCorrLabel = ( 'AK5PFchs', cms.vstring(jetCorrections) ),
+    jetCorrLabel = ( 'AK5PFchs', cms.vstring(pfJetCorrections) ),
     doType1MET = False,
     doJetID = True,
     jetIdLabel = "ak5",
@@ -396,19 +398,23 @@ addJetCollection(
 process.patJetCorrFactorsAK5PFchs.rho = cms.InputTag("kt6PFchsJets","rho")
 process.patJetCorrFactorsAK5PFchs.useRho = cms.bool(True)
 process.patJetCorrFactorsAK5PFchs.payload = cms.string('AK5PFchs')
-addJetCollection(
-    process,
-    cms.InputTag('ak5CaloJets'),
-    algoLabel = "AK5",
-    typeLabel = "Calo",
-    doJTA = True,
-    doBTagging = True,
-    jetCorrLabel = ( 'AK5Calo', cms.vstring(jetCorrections) ),
-    doType1MET = False,
-    doJetID = False,
-    jetIdLabel = "ak5",
-    outputModules = []
-)
+#--------------------------------------------------------------------------------
+# CV: Type-1 corrected CaloMET temporarily disabled
+#     to avoid problem with missing JEC for CaloJets in new Global Tag
+##addJetCollection(
+##    process,
+##    cms.InputTag('ak5CaloJets'),
+##    algoLabel = "AK5",
+##    typeLabel = "Calo",
+##    doJTA = True,
+##    doBTagging = True,
+##    jetCorrLabel = ( 'AK5Calo', cms.vstring(caloJetCorrections) ),
+##    doType1MET = False,
+##    doJetID = False,
+##    jetIdLabel = "ak5",
+##    outputModules = []
+##)
+#--------------------------------------------------------------------------------
 if isMC:
    from PhysicsTools.PatUtils.tools.runJetUncertainties import runJetUncertainties
    runJetUncertainties(
@@ -421,7 +427,7 @@ if isMC:
        doSmearJets = True,
        jetCorrLabelUpToL3 = "ak5PFchsL1FastL2L3",
        jetCorrLabelUpToL3Res = "ak5PFchsL1FastL2L3Residual",
-       jecUncertaintyFile = "PhysicsTools/PatUtils/data/Fall12_V7_DATA_UncertaintySources_AK5PFchs.txt",
+       jecUncertaintyFile = "PhysicsTools/PatUtils/data/Summer13_V1_DATA_UncertaintySources_AK5PFchs.txt",
        addToPatDefaultSequence = True
    )
 switchJetCollection(
@@ -429,7 +435,7 @@ switchJetCollection(
     cms.InputTag('ak5PFJets'),
     doJTA = True,
     doBTagging = True,
-    jetCorrLabel = ( 'AK5PF', cms.vstring(jetCorrections) ),
+    jetCorrLabel = ( 'AK5PF', cms.vstring(pfJetCorrections) ),
     doType1MET = False,
     doJetID = True,
     jetIdLabel = "ak5",
@@ -494,7 +500,8 @@ else:
         residualCorrLabel = cms.string("ak5CaloResidual"),
         residualCorrEtaMax = cms.double(9.9),
         residualCorrOffset = cms.double(1.),
-        extraCorrFactor = cms.double(1.05),                             
+        extraCorrFactor = cms.double(1.05),
+        isMC = cms.bool(False), # CV: only used to decide whether to apply "unclustered energy" calibration to MC or Data     
         globalThreshold = cms.double(0.3), # NOTE: this value need to match met.globalThreshold, defined in RecoMET/METProducers/python/CaloMET_cfi.py
         noHF = cms.bool(True)
     )
@@ -524,6 +531,7 @@ if isMC:
         residualCorrLabel = cms.string(""),
         residualCorrEtaMax = cms.double(9.9),
         residualCorrOffset = cms.double(1.),
+        isMC = cms.bool(False), # CV: only used to decide whether to apply "unclustered energy" calibration to MC or Data                                        
         extraCorrFactor = cms.double(1.05),  
         globalThreshold = cms.double(0.3), # NOTE: this value need to match met.globalThreshold, defined in RecoMET/METProducers/python/CaloMET_cfi.py
         noHF = cms.bool(True)
@@ -564,49 +572,67 @@ if isMC:
     )
     process.patTupleProductionSequence += process.patCaloMetNoHFshiftedDown
 
-process.load("JetMETCorrections/Type1MET/caloMETCorrections_cff")
-process.caloJetMETcorr.srcMET = cms.InputTag('') # CV: produce Type-2 CaloMEt corrections by summing CaloTowers
-process.produceCaloMETCorrections.remove(process.caloType1p2CorrectedMet)
-process.caloType1CorrectedMet.src = cms.InputTag('corMetGlobalMuons')
-if isMC:
-    process.caloJetMETcorr.jetCorrLabel = cms.string("ak5CaloL1FastL2L3")
-else:
-    process.caloJetMETcorr.jetCorrLabel = cms.string("ak5CaloL1FastL2L3Residual")
-##    process.caloType1CorrectedMEtResidualCorr = cms.EDProducer("CaloTowerMETcorrInputProducer",
-##        src = cms.InputTag('towerMaker'),
-##        residualCorrLabel = cms.string("ak5CaloResidual"),
-##        residualCorrEtaMax = cms.double(9.9),
-##        residualCorrOffset = cms.double(1.),
-##        extraCorrFactor = cms.double(1.05),
-##        globalThreshold = cms.double(0.3), # NOTE: this value need to match met.globalThreshold, defined in RecoMET/METProducers/python/CaloMET_cfi.py
-##        noHF = cms.bool(False)                                                                      
-##    )
-##    process.produceCaloMETCorrections.replace(process.caloType1CorrectedMet, process.caloType1CorrectedMEtResidualCorr + process.caloType1CorrectedMet)
-##    process.caloType1CorrectedMet.applyType2Corrections = cms.bool(True)
-##    process.caloType1CorrectedMet.srcUnclEnergySums = cms.VInputTag(cms.InputTag('caloType1CorrectedMEtResidualCorr'))
-##    process.caloType1CorrectedMet.type2CorrFormula = cms.string("A")
-##    process.caloType1CorrectedMet.type2CorrParameter = cms.PSet(A = cms.double(2.))
-process.patTupleProductionSequence += process.caloJetMETcorr
-process.patTupleProductionSequence += process.caloType1CorrectedMet
+#--------------------------------------------------------------------------------
+# CV: Type-1 corrected CaloMET temporarily disabled
+#     to avoid problem with missing JEC for CaloJets in new Global Tag
+##process.load("JetMETCorrections/Type1MET/caloMETCorrections_cff")
+##process.caloJetMETcorr.srcMET = cms.InputTag('') # CV: produce Type-2 CaloMEt corrections by summing CaloTowers
+##process.produceCaloMETCorrections.remove(process.caloType1p2CorrectedMet)
+##process.caloType1CorrectedMet.src = cms.InputTag('corMetGlobalMuons')
+##if isMC:
+##    process.caloJetMETcorr.jetCorrLabel = cms.string("ak5CaloL1FastL2L3")
+##else:
+##    process.caloJetMETcorr.jetCorrLabel = cms.string("ak5CaloL1FastL2L3Residual")
+####    process.caloType1CorrectedMEtResidualCorr = cms.EDProducer("CaloTowerMETcorrInputProducer",
+####        src = cms.InputTag('towerMaker'),
+####        residualCorrLabel = cms.string("ak5CaloResidual"),
+####        residualCorrEtaMax = cms.double(9.9),
+####        residualCorrOffset = cms.double(1.),
+####        extraCorrFactor = cms.double(1.05),
+####        globalThreshold = cms.double(0.3), # NOTE: this value need to match met.globalThreshold, defined in RecoMET/METProducers/python/CaloMET_cfi.py
+####        noHF = cms.bool(False)                                                                      
+####    )
+####    process.produceCaloMETCorrections.replace(process.caloType1CorrectedMet, process.caloType1CorrectedMEtResidualCorr + process.caloType1CorrectedMet)
+####    process.caloType1CorrectedMet.applyType2Corrections = cms.bool(True)
+####    process.caloType1CorrectedMet.srcUnclEnergySums = cms.VInputTag(cms.InputTag('caloType1CorrectedMEtResidualCorr'))
+####    process.caloType1CorrectedMet.type2CorrFormula = cms.string("A")
+####    process.caloType1CorrectedMet.type2CorrParameter = cms.PSet(A = cms.double(2.))
+##process.patTupleProductionSequence += process.caloJetMETcorr
+##process.patTupleProductionSequence += process.caloType1CorrectedMet
 process.patType1CorrectedCaloMet = process.patMETs.clone(
     metSource = cms.InputTag('caloType1CorrectedMet'),
     addMuonCorrections = cms.bool(False),
     genMETSource = cms.InputTag('genMetCalo')
 )
-process.patTupleProductionSequence += process.patType1CorrectedCaloMet
+##process.patTupleProductionSequence += process.patType1CorrectedCaloMet
+#--------------------------------------------------------------------------------
 
-from TauAnalysis.Configuration.tools.metTools import addCorrectedCaloMet
-addCorrectedCaloMet(process, isMC, jecUncertaintyTag, applyUnclEnergyResidualCorr)
-process.patTupleProductionSequence += process.makeCorrectedPatCaloMETs
+#--------------------------------------------------------------------------------
+# CV: Type-1 corrected CaloMET temporarily disabled
+#     to avoid problem with missing JEC for CaloJets in new Global Tag
+process.patDefaultSequence.remove(process.makePatMETs)
+#--------------------------------------------------------------------------------
+
+#--------------------------------------------------------------------------------
+# CV: Type-1 corrected CaloMET temporarily disabled
+#     to avoid problem with missing JEC for CaloJets in new Global Tag
+##from TauAnalysis.Configuration.tools.metTools import addCorrectedCaloMet
+##addCorrectedCaloMet(process, isMC, jecUncertaintyTag, applyUnclEnergyResidualCorr)
+##process.patTupleProductionSequence += process.makeCorrectedPatCaloMETs
+#--------------------------------------------------------------------------------
 
 process.caloType1CorrectedMetNoHF = process.caloType1CorrectedMet.clone(
     src = cms.InputTag('corMetGlobalMuonsNoHF')
 )
-process.patTupleProductionSequence += process.caloType1CorrectedMetNoHF
+#--------------------------------------------------------------------------------
+# CV: Type-1 corrected CaloMET temporarily disabled
+#     to avoid problem with missing JEC for CaloJets in new Global Tag
+##process.patTupleProductionSequence += process.caloType1CorrectedMetNoHF
 process.patType1CorrectedCaloMetNoHF = process.patType1CorrectedCaloMet.clone(
     metSource = cms.InputTag('caloType1CorrectedMetNoHF')
 )
-process.patTupleProductionSequence += process.patType1CorrectedCaloMetNoHF
+##process.patTupleProductionSequence += process.patType1CorrectedCaloMetNoHF
+#--------------------------------------------------------------------------------
 
 process.metL1ETM = cms.EDProducer("L1ExtraMEtToCaloMEtConverter",
     src = cms.InputTag('l1extraParticles', 'MET')                  
@@ -625,7 +651,21 @@ process.patL1ETM = process.patMETs.clone(
 process.patTupleProductionSequence += process.patL1ETM
 
 process.load("LLRAnalysis/TauTauStudies/sumCaloTowersInEtaSlices_cfi")
-process.patTupleProductionSequence += process.sumCaloTowersInEtaSlicesNoHF
+process.patTupleProductionSequence += process.sumCaloTowersInEtaSlicesNoHF28bins
+process.patTupleProductionSequence += process.sumCaloTowersInEtaSlicesNoHF32bins
+
+process.sumCaloTowersInEtaSlices28bins = process.sumCaloTowersInEtaSlicesNoHF28bins.clone(
+    noHF = cms.bool(False)
+)
+process.patTupleProductionSequence += process.sumCaloTowersInEtaSlices28bins
+process.sumCaloTowersInEtaSlices32bins = process.sumCaloTowersInEtaSlicesNoHF32bins.clone(
+    noHF = cms.bool(False)
+)
+process.patTupleProductionSequence += process.sumCaloTowersInEtaSlices32bins
+
+process.load("JetMETCorrections/Type1MET/sumTracksInEtaSlices_cfi")
+process.patTupleProductionSequence += process.sumTracksInEtaSlices28bins
+process.patTupleProductionSequence += process.sumTracksInEtaSlices32bins
 
 # add TrackMET
 process.load("RecoMET/METProducers/recoTrackMET_cfi")
@@ -662,33 +702,42 @@ process.patTupleOutputModule = cms.OutputModule("PoolOutputModule",
         'keep *_goldenZmumuCandidatesGe0IsoMuons_*_*',
         'keep *_goldenZmumuCandidatesGe1IsoMuons_*_*',
         'keep *_goldenZmumuCandidatesGe2IsoMuons_*_*',                                                        
-        ##'keep *_offlinePrimaryVertices_*_*',
-        ##'keep *_offlinePrimaryVerticesWithBS_*_*',
+        'keep *_offlinePrimaryVertices_*_*',
+        'keep *_offlinePrimaryVerticesWithBS_*_*',
         'keep *_selectedPrimaryVertexPosition_*_*',                                         
         ##'keep *_selectedPrimaryVertexHighestPtTrackSum_*_*',
         ##'keep *_selectedPrimaryVerticesTrackPtSumGt5_*_*',
         ##'keep *_selectedPrimaryVerticesTrackPtSumGt10_*_*',                                            
-        'keep *_patJets_*_*',                                                    
-        'keep *_smearedPatJets_*_*',
-        'keep *_shiftedPatJetsEnUp*_*_*',                                
-        'keep *_shiftedPatJetsEnDown*_*_*',
-        'keep *_smearedPatJetsResDown_*_*',
-        'keep *_smearedPatJetsResUp_*_*',                                                    
-        'keep *_selectedPatJetsAntiOverlapWithMuonsVeto_*_*',
-        'keep *_patJetsAK5PFchs*_*_*',
-        'keep *_smearedPatJetsAK5PFchs_*_*',
-        'keep *_shiftedPatJetsAK5PFchsEnUp*_*_*',                                
-        'keep *_shiftedPatJetsAK5PFchsEnDown*_*_*',
-        'keep *_smearedPatJetsAK5PFchsResDown_*_*',
-        'keep *_smearedPatJetsAK5PFchsResUp_*_*',
-        'keep *_patJetsAK5Calo*_*_*',
-        'keep *_shiftedPatJetsAK5CaloEnUp*_*_*',                                
-        'keep *_shiftedPatJetsAK5CaloEnDown*_*_*',
-        ##'keep *_pfCandsNotInJet_*_*',
-        'drop *_patJets*_pfCandidates_*',                                            
+        'keep patJets_patJets_*_*',
+        'keep patJets_patJetsNotOverlappingWithLeptonsForJetMEtUncertainty_*_*',                                            
+        'keep patJets_smearedPatJets_*_*',
+        'keep patJets_shiftedPatJetsEnUpForCorrMEt_*_*',
+        'keep patJets_shiftedPatJetsEnUpForRawMEt_*_*',                                            
+        'keep patJets_shiftedPatJetsEnDownForCorrMEt_*_*',
+        'keep patJets_shiftedPatJetsEnDownForRawMEt_*_*',                                            
+        'keep patJets_smearedPatJetsResDown_*_*',
+        'keep patJets_smearedPatJetsResUp_*_*',                                                    
+        'keep patJets_patJetsAK5PFchs_*_*',
+        'keep patJets_patJetsAK5PFchsNotOverlappingWithLeptonsForJetMEtUncertainty_*_*',                  
+        'keep patJets_smearedPatJetsAK5PFchs_*_*',
+        'keep patJets_shiftedPatJetsAK5PFchsEnUpForCorrMEt_*_*',
+        'keep patJets_shiftedPatJetsAK5PFchsEnUpForRawMEt_*_*',              
+        'keep patJets_shiftedPatJetsAK5PFchsEnDownForCorrMEt_*_*',
+        'keep patJets_shiftedPatJetsAK5PFchsEnDownForRawMEt_*_*',                                            
+        'keep patJets_smearedPatJetsAK5PFchsResDown_*_*',
+        'keep patJets_smearedPatJetsAK5PFchsResUp_*_*',
+        'keep patJets_patJetsAK5Calo_*_*',
+        'keep patJets_patJetsAK5CaloNotOverlappingWithLeptonsForJetMEtUncertainty_*_*',                                     
+        'keep patJets_smearedPatJetsAK5Calo_*_*',
+        'keep patJets_shiftedPatJetsAK5CaloEnUpForCorrMEt_*_*',
+        'keep patJets_shiftedPatJetsAK5CaloEnUpForRawMEt_*_*',                                            
+        'keep patJets_shiftedPatJetsAK5CaloEnDownForCorrMEt_*_*',
+        'keep patJets_shiftedPatJetsAK5CaloEnDownForRawMEt_*_*',               
         'keep *_particleFlow_*_*',                                                    
-        ##'keep *_ak5PFJets_*_*',
-        'keep *_ak5PFchsJets_*_*',                                            
+        'keep *_ak5PFJets_*_*',
+        'keep *_ak5PFchsJets_*_*',
+        'keep *_towerMaker_*_*',                                                  
+        'keep *_ak5CaloJets_*_*',                                            
         'keep *_patPFMet*_*_*',
         'keep *_patType1CorrectedPFMet*_*_*',
         'keep *_patType1p2CorrectedPFMet*_*_*',
@@ -701,16 +750,22 @@ process.patTupleOutputModule = cms.OutputModule("PoolOutputModule",
         'keep *_patPFchsMetNoPileUp*_*_*',                                            
         'keep CommonMETData_noPileUpPFchsMEt*_*_*',
         'keep double_noPileUpPFchsMEt*_*_*',                                            
-        'keep *_patMinMEt*_*_*',                            
+        'keep *_patMinMEt*_*_*',
         'keep *_patCaloMet*_*_*',
         'keep *_patType1CorrectedCaloMet*_*_*',
         'keep *_patL1ETM*_*_*',
-        'keep *_sumCaloTowersInEtaSlicesNoHF*_*_*',                 
-        'keep *_patTrackMet*_*_*',                                        
+        'keep *_sumCaloTowersInEtaSlicesNoHF*_*_*',
+        'keep *_sumCaloTowersInEtaSlices*_*_*',                                            
+        'keep *_sumTracksInEtaSlices*_*_*',                                       
+        'keep *_patTrackMet*_*_*',
+        'keep *_ak5CaloJets_rho_*',
+        'keep *_ak5PFJets_rho_*',
+        'keep *_kt6CaloJets_rho_*',
+        'keep *_kt6PFJets_rho_*',        
         'keep *_kt6PFNeutralJetsForVtxMultReweighting_rho_*',
         'keep *_kt6PFChargedHadronNoPileUpJetsForVtxMultReweighting_rho_*',
         'keep *_kt6PFChargedHadronPileUpJetsForVtxMultReweighting_rho_*',
-        'keep *_kt6PFChargedHadronJetsForVtxMultReweighting_rho_*'                                            
+        'keep *_kt6PFChargedHadronJetsForVtxMultReweighting_rho_*'
     ),
     SelectEvents = cms.untracked.PSet(
         SelectEvents = cms.vstring('p')

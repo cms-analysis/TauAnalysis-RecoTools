@@ -125,7 +125,9 @@ void ZllRecoilCorrectionProducerT1T2<T1,T2>::produce(edm::Event& evt, const edm:
   evt.put(correctedMEtAssociations, instNameDiTauToMEtAssociations);  
 }
 
-#include "FWCore/Framework/interface/MakerMacros.h"
+#include "DataFormats/PatCandidates/interface/Electron.h"
+#include "DataFormats/PatCandidates/interface/Muon.h"
+#include "DataFormats/PatCandidates/interface/Tau.h"
 
 typedef ZllRecoilCorrectionProducerT1T2<pat::Electron, pat::Tau> ZllRecoilCorrectionElecTauPair;
 typedef ZllRecoilCorrectionProducerT1T2<pat::Muon, pat::Tau> ZllRecoilCorrectionMuTauPair;

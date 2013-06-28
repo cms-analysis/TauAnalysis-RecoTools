@@ -10,8 +10,10 @@
 #include <TVectorD.h>
 
 NoPileUpMEtInputHistManager::NoPileUpMEtInputHistManager(const edm::ParameterSet& cfg)
+  : histogramSF_(0)
 {
   src_ = cfg.getParameter<edm::InputTag>("src");
+  srcSF_ = cfg.getParameter<edm::InputTag>("srcSF");
   inputsToPlot_ = cfg.getParameter<vstring>("inputsToPlot");
 }
 
@@ -31,6 +33,7 @@ void NoPileUpMEtInputHistManager::bookHistograms(TFileDirectory& dir)
     histogramEntryType* histogramEntry = new histogramEntryType(this, subdir, edm::InputTag(src_.label(), *inputToPlot));
     histogramEntries_.push_back(histogramEntry);
   }
+  histogramSF_ = book1D(dir, "sfNoPU", "sfNoPU", 101, -0.005, 1.005);
 }
 
 void NoPileUpMEtInputHistManager::fillHistograms(
@@ -71,12 +74,18 @@ void NoPileUpMEtInputHistManager::fillHistograms(
 	  histogramEntry != histogramEntries_.end(); ++histogramEntry ) {
       (*histogramEntry)->fillHistograms(ZllCand.p4(), evt, evtWeight);
     }
-  }
+    
+    if ( srcSF_.label() != "" ) {
+      edm::Handle<double> sfNoPU;
+      evt.getByLabel(srcSF_, sfNoPU);
+      histogramSF_->Fill(*sfNoPU, evtWeight);
+    }
+  }  
 }
 
 void NoPileUpMEtInputHistManager::scaleHistograms(double factor)
 {
-  for ( std::vector<TH1*>::iterator histogram = histograms_.begin();
+  for ( std::vector<TH1*>::iterator histogram = histograms_.begin();	
 	histogram != histograms_.end(); ++histogram ) {
     if ( !(*histogram)->GetSumw2N() ) (*histogram)->Sumw2(); // CV: compute "proper" errors before scaling histogram
     (*histogram)->Scale(factor);

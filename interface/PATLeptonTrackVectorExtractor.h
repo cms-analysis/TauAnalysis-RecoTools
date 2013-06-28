@@ -11,7 +11,7 @@
  *
  * \version $Revision: 1.1 $
  *
- * $Id: PATLeptonTrackVectorExtractor.h,v 1.1 2011/04/05 13:27:58 veelken Exp $
+ * $Id: PATLeptonTrackVectorExtractor.h,v 1.1 2011/04/15 16:56:40 veelken Exp $
  *
  */
 
@@ -72,8 +72,8 @@ class PATLeptonTrackVectorExtractor<pat::Tau>
     //std::cout << "<PATLeptonTrackVectorExtractor<pat::Tau>::operator()>" << std::endl;
     std::vector<const reco::Track*> retVal;
     if ( tau.isPFTau() ) {
-      const reco::PFCandidateRefVector& pfChargedHadrons = tau.signalPFChargedHadrCands();
-      for ( reco::PFCandidateRefVector::const_iterator pfChargedHadron = pfChargedHadrons.begin();
+      const std::vector<reco::PFCandidatePtr>& pfChargedHadrons = tau.signalPFChargedHadrCands();
+      for ( std::vector<reco::PFCandidatePtr>::const_iterator pfChargedHadron = pfChargedHadrons.begin();
 	    pfChargedHadron != pfChargedHadrons.end(); ++pfChargedHadron ) {
 	if ( (*pfChargedHadron)->trackRef().isNonnull() ) retVal.push_back((*pfChargedHadron)->trackRef().get());
       }

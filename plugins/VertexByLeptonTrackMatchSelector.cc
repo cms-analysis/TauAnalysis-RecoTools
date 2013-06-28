@@ -56,8 +56,8 @@ namespace
       if ( !muon->innerTrack().isNull() ) leptonTracks.push_back(muon->innerTrack().get());
     } else if ( dynamic_cast<const reco::PFTau*>(lepton) ) {
       const reco::PFTau* tau = dynamic_cast<const reco::PFTau*>(lepton);
-      const reco::PFCandidateRefVector& tauPFChargedHadrCands = tau->signalPFChargedHadrCands();
-      for ( reco::PFCandidateRefVector::const_iterator tauPFChargedHadrCand = tauPFChargedHadrCands.begin();
+      const std::vector<reco::PFCandidatePtr>& tauPFChargedHadrCands = tau->signalPFChargedHadrCands();
+      for ( std::vector<reco::PFCandidatePtr>::const_iterator tauPFChargedHadrCand = tauPFChargedHadrCands.begin();
 	    tauPFChargedHadrCand != tauPFChargedHadrCands.end(); ++tauPFChargedHadrCand ) {
 	if ( !(*tauPFChargedHadrCand)->trackRef().isNull() ) leptonTracks.push_back((*tauPFChargedHadrCand)->trackRef().get());
 	else if ( !(*tauPFChargedHadrCand)->gsfTrackRef().isNull() ) leptonTracks.push_back((*tauPFChargedHadrCand)->gsfTrackRef().get());
@@ -65,8 +65,8 @@ namespace
     } else if ( dynamic_cast<const pat::Tau*>(lepton) ) {
       const pat::Tau* tau = dynamic_cast<const pat::Tau*>(lepton);
       if ( tau->isPFTau() ) {
-	const reco::PFCandidateRefVector& tauPFChargedHadrCands = tau->signalPFChargedHadrCands();
-	for ( reco::PFCandidateRefVector::const_iterator tauPFChargedHadrCand = tauPFChargedHadrCands.begin();
+	const std::vector<reco::PFCandidatePtr>& tauPFChargedHadrCands = tau->signalPFChargedHadrCands();
+	for ( std::vector<reco::PFCandidatePtr>::const_iterator tauPFChargedHadrCand = tauPFChargedHadrCands.begin();
 	      tauPFChargedHadrCand != tauPFChargedHadrCands.end(); ++tauPFChargedHadrCand ) {
 	  if ( !(*tauPFChargedHadrCand)->trackRef().isNull() ) leptonTracks.push_back((*tauPFChargedHadrCand)->trackRef().get());
 	  else if ( !(*tauPFChargedHadrCand)->gsfTrackRef().isNull() ) leptonTracks.push_back((*tauPFChargedHadrCand)->gsfTrackRef().get());

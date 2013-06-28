@@ -94,6 +94,9 @@ TGraphAsymmErrors* makeGraph_uParl_div_qT(const std::string& name, const std::st
 					  const TH2* histogram_uParl, const TH1* histogram_qT,
 					  bool isCaloMEt)
 {
+  //std::cout << "<makeGraph_uParl_div_qT>:" << std::endl;
+  //std::cout << " name = " << name << std::endl;
+  
   const TAxis* xAxis = histogram_uParl->GetXaxis();
   int numBins = xAxis->GetNbins();
 
@@ -104,6 +107,7 @@ TGraphAsymmErrors* makeGraph_uParl_div_qT(const std::string& name, const std::st
   for ( int iBin = 1; iBin <= numBins; ++iBin ) {
     double qTmin = xAxis->GetBinLowEdge(iBin);
     double qTmax = xAxis->GetBinUpEdge(iBin);
+    //std::cout << "bin #" << iBin << ": qT = " << qTmin << ".." << qTmax << std::endl;
 
     int binLowIndex = const_cast<TH1*>(histogram_qT)->FindBin(qTmin);
     int binUpIndex  = const_cast<TH1*>(histogram_qT)->FindBin(qTmax);
@@ -112,16 +116,18 @@ TGraphAsymmErrors* makeGraph_uParl_div_qT(const std::string& name, const std::st
     double x        = histogram_qT->GetMean();
     double xErrUp   = qTmax - x;
     double xErrDown = x - qTmin;
+    //std::cout << " x = " << x << " + " << xErrUp << " - " << xErrDown << std::endl;
 
     TString histogramName_uParl_proj = Form("%s_py_%i", histogram_uParl->GetName(), iBin);
     TH1D* histogram_uParl_proj = histogram_uParl->ProjectionY(histogramName_uParl_proj.Data(), iBin, iBin, "e");
+    //std::cout << "histogram(1d-projection): entries = " << histogram_uParl_proj->GetEntries() << std::endl;
     // CV: skip qT bins with limited event statistics
     if ( !(histogram_uParl_proj->GetEntries() >= 100) ) continue;
 
     if ( x > 0. ) {
       double y = -histogram_uParl_proj->GetMean()/x;    
-      if ( isCaloMEt ) y -= 1.; 
       double yErr = histogram_uParl_proj->GetMeanError()/x;
+      //std::cout << " y = " << y << " +/- " << yErr << std::endl;
       graph->SetPoint(iBin - 1, x, y);      
       graph->SetPointError(iBin - 1, xErrDown, xErrUp, yErr, yErr);
     }
@@ -141,7 +147,7 @@ TGraphAsymmErrors* makeGraph_metXorY_vs_sumEt(const std::string& name, const std
 //
 
 TF1* fitGraph_uParl_div_qT(const std::string& name, TGraph* graph, double xMin = 0., double xMax = 300.)
-{
+{  
   TF1* f = new TF1(name.data(), "[0]*0.5*(1.0 - TMath::Erf(-[1]*TMath::Power(x, [2])))", xMin, xMax);
   f->SetLineWidth(0);
   f->SetParameter(0, 1.0);
@@ -149,6 +155,11 @@ TF1* fitGraph_uParl_div_qT(const std::string& name, TGraph* graph, double xMin =
   f->SetParameter(2, 1.0);
   TGraph* dummyGraph = (TGraph*)graph->Clone(); // CV: fit 'dummyGraph', to avoid TF1 getting attached to 'graph' object
   dummyGraph->Fit(f, "E");
+  std::cout << "<fitGraph_uParl_div_qT>:" << std::endl;
+  std::cout << " name = " << name << std::endl;
+  std::cout << " p0 = " << square(f->GetParameter(0)) << " +/- " << square(f->GetParError(0)) << std::endl;
+  std::cout << " p1 = " << square(f->GetParameter(1)) << " +/- " << square(f->GetParError(1)) << std::endl;
+  std::cout << " p2 = " << square(f->GetParameter(2)) << " +/- " << square(f->GetParError(2)) << std::endl;
   return f;
 }
 
@@ -161,6 +172,11 @@ TF1* fitGraph_uParl_mean(const std::string& name, TGraph* graph, double xMin = 0
   f->SetParameter(2,  1.0);
   TGraph* dummyGraph = (TGraph*)graph->Clone(); // CV: fit 'dummyGraph', to avoid TF1 getting attached to 'graph' object
   dummyGraph->Fit(f, "E");
+  std::cout << "<fitGraph_uParl_mean>:" << std::endl;
+  std::cout << " name = " << name << std::endl;
+  std::cout << " p0 = " << square(f->GetParameter(0)) << " +/- " << square(f->GetParError(0)) << std::endl;
+  std::cout << " p1 = " << square(f->GetParameter(1)) << " +/- " << square(f->GetParError(1)) << std::endl;
+  std::cout << " p2 = " << square(f->GetParameter(2)) << " +/- " << square(f->GetParError(2)) << std::endl;
   return f;
 }
 
@@ -347,9 +363,9 @@ TGraphAsymmErrors* makeGraph_sysUncertainty(const TGraphAsymmErrors* graph_centr
     graph_central_value->GetPoint(iPoint,x, y);
     double xErrUp = graph_central_value->GetErrorXhigh(iPoint); 
     double xErrDown = graph_central_value->GetErrorXlow(iPoint);
-
-    double yErrMin2 = 0.;
-    double yErrMax2 = 0.;
+    
+    double yErrMin2 = square(graph_central_value->GetErrorYlow(iPoint));
+    double yErrMax2 = square(graph_central_value->GetErrorYhigh(iPoint));
     for ( int iSysUncertainty = 0; iSysUncertainty < numSysUncertainties; ++iSysUncertainty ) {
       const TGraphAsymmErrors* graphUp = graphs_sysUncertainty[2*iSysUncertainty];
       assert(graphUp->GetN() == numPoints);
@@ -369,8 +385,8 @@ TGraphAsymmErrors* makeGraph_sysUncertainty(const TGraphAsymmErrors* graph_centr
       double yErrDown_low = graphDown->GetErrorYlow(iPoint); 
       //assert(xDown == x);
 
-      double yMin = TMath::Min(yUp + yErrUp_high, yDown + yErrDown_high);
-      double yMax = TMath::Max(yUp - yErrUp_low, yDown - yErrDown_low);
+      double yMin = TMath::Min(yUp, yDown);
+      double yMax = TMath::Max(yUp, yDown);
       if ( yMin < y ) yErrMin2 += square(y - yMin);
       if ( yMax > y ) yErrMax2 += square(yMax - y);
     }

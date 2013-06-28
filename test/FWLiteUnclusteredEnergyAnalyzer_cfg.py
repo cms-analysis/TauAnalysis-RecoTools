@@ -5,6 +5,7 @@ import TauAnalysis.Configuration.tools.eos as eos
 
 import os
 import re
+import time
 
 process = cms.PSet()
 
@@ -16,24 +17,32 @@ process.fwliteInput = cms.PSet(
 #--------------------------------------------------------------------------------
 # define configuration parameter default values
 
+##sample = 'Data_runs203894to208686'
 sample = 'ZplusJets_madgraph'
 #shiftBy = -0.10
 shiftBy = 0.
 #shiftBy = +0.10
-branchNames_weights = [ 'vertexMultiplicityReweight3d2012RunDruns203894to208686_' ] 
+branchNames_weights = [ 'vertexMultiplicityReweight3d2012RunDruns203894to208686' ] 
 applyZvtxReweight = True
 applyQtReweight = True
 
-version = 'v9_07_2013May01'
+version = 'v1_1'
 
 # PFCandidates
 metType = "pfCands"
+##metType = "pfJetsPlusCandsNotInJet"
 branchName_met = 'pfMEt'
 branchName_jetSum = ''
 branchName_unclEnSum = 'sumPFCands'
-subtract_qT = True
+branchName_jetCorr = ''
+branchName_jetCorr_offset = ''
+##subtract_qT = True
+subtract_qT = False
 etaMin = -9.9
 etaMax = +9.9
+
+type1JetPtThreshold = 10.
+applyResidualCorr = False
 
 ##numEtaBinsForResidualCorr = 28
 numEtaBinsForResidualCorr = 32
@@ -53,75 +62,92 @@ outputFileName = None
 #__applyResidualCorr = #applyResidualCorr#
 #__outputFileName = #outputFileName#
 #
+isMC = None
 if sample == 'ZplusJets_madgraph':
-    ##branchNames_weights = [ 'vertexMultiplicityReweight3d2012RunDruns203894to208686_' ]
-    branchNames_weights = []
+    branchNames_weights = [ 'vertexMultiplicityReweight3d2012RunDruns203894to208686' ]
     applyZvtxReweight = True
     ##applyZvtxReweight = False
     applyQtReweight = True
     numPileUpBinning = [ 0., 12.5, 15., 17.5, 20., 22.5, 1.e+3 ]
-elif sample == 'Data_runs190456to193621' or \
-     sample == 'Data_runs193834to196531' or \
-     sample == 'Data_runs190782to190949_recover' or \
-     sample == 'Data_runs198022to198523' or \
-     sample == 'Data_runs198934to202016' or \
-     sample == 'Data_runs202044to203002' or \
-     sample == 'Data_runs203894to208686':
+    isMC = True
+##elif sample == 'Data_runs190456to193621' or \
+##     sample == 'Data_runs193834to196531' or \
+##     sample == 'Data_runs190782to190949_recover' or \
+##     sample == 'Data_runs198022to198523' or \
+##     sample == 'Data_runs198934to202016' or \
+##     sample == 'Data_runs202044to203002' or \
+##     sample == 'Data_runs203894to208686':
+elif sample == 'Data_runs190456to193621_ReReco' or \
+     sample == 'Data_runs193833to196531_ReReco' or \
+     sample == 'Data_runs198022to203742_ReReco' or \
+     sample == 'Data_runs203777to208686_ReReco':
     branchNames_weights = []
     applyZvtxReweight = False
     applyQtReweight = False
     numPileUpBinning = [ 0., 12.5, 15., 17.5, 20., 22.5, 1.e+3 ]
+    isMC = False
 else:
     raise ValueError("Invalid Configuration Parameter 'sample' = %s !!" % sample)
 if metType == "caloTowersNoHF":
     branchName_met = 'caloMEtNoHF'
     branchName_jetSum = ''
     branchName_unclEnSum = 'caloTowersNoHF'
+    branchName_jetCorr = ''
+    branchName_jetCorr_offset = ''
     subtract_qT = False
     etaMin = -3.0
     etaMax = +3.0
-    residualCorrFileName = "JetMETCorrections/Type1MET/data/unclEnResidualCorr_2012RunABCDruns190456to208686_caloTowersNoHF.txt"
 elif metType == "caloTowers":
     branchName_met = 'caloMEt'
     branchName_jetSum = ''
     branchName_unclEnSum = 'caloTowers'
+    branchName_jetCorr = ''
+    branchName_jetCorr_offset = ''
     subtract_qT = False
     etaMin = -9.9
     etaMax = +9.9
-    residualCorrFileName = "JetMETCorrections/Type1MET/data/unclEnResidualCorr_2012RunABCDruns190456to208686_caloTowers.txt"
 elif metType == "pfCands":
     branchName_met = 'pfMEt'
     branchName_jetSum = ''
     branchName_unclEnSum = 'sumPFCands'
+    branchName_jetCorr = ''
+    branchName_jetCorr_offset = ''
     subtract_qT = True
+    ##subtract_qT = False
     etaMin = -9.9
     etaMax = +9.9
-    residualCorrFileName = "JetMETCorrections/Type1MET/data/unclEnResidualCorr_2012RunABCDruns190456to208686_pfCands.txt"
 elif metType == "pfJetsPlusCandsNotInJet":
     branchName_met = 'pfMEt'
     branchName_jetSum = 'sumPFJetsPtGt%1.0f' % type1JetPtThreshold
     branchName_unclEnSum = 'sumPFJetsPtLt%1.0fPlusCandsNotInJet' % type1JetPtThreshold
-    subtract_qT = True
+    branchName_jetCorr = 'sumPFJetsPtGt%1.0fL1FastL2L3' % type1JetPtThreshold
+    branchName_jetCorr_offset = 'sumPFJetsPtGt%1.0fL1Fastjet' % type1JetPtThreshold
+    ##subtract_qT = True
+    subtract_qT = False
     etaMin = -9.9
     etaMax = +9.9
-    residualCorrFileName = "JetMETCorrections/Type1MET/data/unclEnResidualCorr_2012RunABCDruns190456to208686_pfCands.txt"
 elif metType == "tracks":
     branchName_met = 'trackMEt'
     branchName_jetSum = ''
     branchName_unclEnSum = 'tracks'
+    branchName_jetCorr = ''
+    branchName_jetCorr_offset = ''
     subtract_qT = True
     etaMin = -9.9
     etaMax = +9.9
-    residualCorrFileName = "JetMETCorrections/Type1MET/data/unclEnResidualCorr_2012RunABCDruns190456to208686_tracks.txt"
 elif metType == "genParticles":
     branchName_met = 'genMEt'
     branchName_jetSum = ''
     branchName_unclEnSum = 'sumGenParticles'
+    branchName_jetCorr = ''
+    branchName_jetCorr_offset = ''
     subtract_qT = True
     etaMin = -9.9
     etaMax = +9.9    
 else:    
-    raise ValueError("Invalid Configuration Parameter 'metType' = %s !!" % metType)  
+    raise ValueError("Invalid Configuration Parameter 'metType' = %s !!" % metType)
+if not isMC and len(branchName_jetCorr) > 0:
+    branchName_jetCorr += 'Residual'
 #--------------------------------------------------------------------------------
 
 etaBinsForResidualCorr = None
@@ -159,8 +185,8 @@ for idxEtaBinForResidualCorr in range(numEtaBinsForResidualCorr):
     )
     etaBinning.append(cfgBinnining)
 
-inputFilePath = '/data2/veelken/CMSSW_5_3_x/Ntuples/unclEnCalibration/'
-inputFile_regex = r"[a-zA-Z0-9_/:.]*unclEnCalibrationNtuple_%s_%s.root" % (sample, version)
+inputFilePath = '/data2/veelken/CMSSW_5_3_x/Ntuples/unclEnCalibration/%s/' % version
+inputFile_regex = r"[a-zA-Z0-9_/:.]*unclEnCalibrationNtuple_%s_%s_[0-9]+.root" % (sample, version)
 
 #--------------------------------------------------------------------------------
 inputFileNames = []
@@ -176,8 +202,20 @@ inputFileNames_matched = []
 for inputFileName in inputFileNames:
     inputFile_matcher = re.compile(inputFile_regex)
     if inputFile_matcher.match(inputFileName):
+        if inputFileName.find("file:") == 0:
+            inputFile_lastModificationTime = os.path.getmtime(inputFileName.replace("file:", ""))
+            #print inputFile_lastModificationTime
+            currentTime = time.time()
+            #print currentTime
+            numHours = (currentTime - inputFile_lastModificationTime)/(60*60)
+            if numHours < 3:
+                print "inputFileName %s may still be written to --> skipping !!" % inputFileName.replace("file:", "")
+                continue                                                    
 	inputFileNames_matched.append(inputFileName)
-#print "inputFileNames_matched = %s" % inputFileNames_matched
+print "inputFileNames_matched = %s" % inputFileNames_matched
+
+##inputFileNames_matched = [ '/data2/veelken/CMSSW_5_3_x/Ntuples/unclEnCalibration/unclEnCalibrationNtuple_Data_runs203894to208686_qTgt80.root' ]
+##inputFileNames_matched = [ '/data2/veelken/CMSSW_5_3_x/Ntuples/unclEnCalibration/unclEnCalibrationNtuple_ZplusJets_madgraph_qTgt80.root' ]
 
 if len(inputFileNames_matched) == 0:
     raise ValueError("Found no input files !!")
@@ -194,29 +232,35 @@ print "directory = %s" % directory
     
 label = ""
 if applyResidualCorr:
-    label += "_wCalibration"
+    label = "wCalibration"
 else:    
     if abs(shiftBy) < 1.e-3:
-        label += "_central"
+        label = "central"
     elif shiftBy > +1.e-3:
-        label += "_shiftUp"
+        label = "shiftUp"
     elif shiftBy < -1.e-3:
-        label += "_shiftDown"
+        label = "shiftDown"
+if type1JetPtThreshold > 1.e-3:
+    label += "_jetPtThreshold%1.1f" % type1JetPtThreshold
+    label = label.replace(".", "_")
 print "label = %s" % label
-outputFileName = 'UnclusteredEnergyAnalyzer_%s_%s_%s.root' % (sample, metType, label)
+if not outputFileName:
+    outputFileName = 'UnclusteredEnergyAnalyzer_%s_%s_%s.root' % (sample, metType, label)
 process.fwliteOutput = cms.PSet(
     fileName = cms.string(outputFileName)
 )
 
 process.UnclusteredEnergyAnalyzer = cms.PSet(
     metType = cms.string(metType),
-    treeName = cms.string("unclEnCalibrationNtupleProducer/unclEnCalibrationNtuple"),
+    treeName = cms.string("unclEnCalibrationNtupleProducer%ibins/unclEnCalibrationNtuple%i" % (numEtaBinsForResidualCorr, numEtaBinsForResidualCorr)),
     branchName_recZ = cms.string('recZ'),
     branchName_recMuPlus = cms.string('recMuPlus'),
     branchName_recMuMinus = cms.string('recMuMinus'),
     branchName_met = cms.string(branchName_met),
     branchName_jetSum = cms.string(branchName_jetSum),
     branchName_unclEnSum = cms.string(branchName_unclEnSum),
+    branchName_jetCorr = cms.string(branchName_jetCorr),
+    branchName_jetCorr_offset = cms.string(branchName_jetCorr_offset),
     branchName_numVertices = cms.string('numVertices'),
     branchName_zVtx = cms.string('theVertexZ'),
     branchName_numPileUp = cms.string('numPileUp'),
@@ -237,4 +281,13 @@ process.UnclusteredEnergyAnalyzer = cms.PSet(
 )
 
 if applyResidualCorr:
-    process.UnclusteredEnergyAnalyzer.residualCorrFileName = cms.FileInPath(residualCorrFileName)
+    process.UnclusteredEnergyAnalyzer.residualCorrFileNames = cms.PSet(
+        data = cms.PSet(
+            offset = cms.FileInPath('TauAnalysis/RecoTools/data/unclEnResidualCorr_Data_runs190456to208686_%s_offset.txt' % metType),
+            slope = cms.FileInPath('TauAnalysis/RecoTools/data/unclEnResidualCorr_Data_runs190456to208686_%s_slope.txt' % metType)
+        ),
+        mc = cms.PSet(
+            offset = cms.FileInPath('TauAnalysis/RecoTools/data/unclEnResidualCorr_ZplusJets_madgraph_%s_offset.txt' % metType),
+            slope = cms.FileInPath('TauAnalysis/RecoTools/data/unclEnResidualCorr_ZplusJets_madgraph_%s_slope.txt' % metType)
+        )
+    )        

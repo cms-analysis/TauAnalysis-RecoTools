@@ -26,6 +26,7 @@
   <use   name="DataFormats/Candidate"/>
   <use   name="DataFormats/Common"/>
   <use   name="DataFormats/FWLite"/>
+  <use   name="DataFormats/HepMCCandidate"/>
   <use   name="DataFormats/ParticleFlowCandidate"/>
   <use   name="DataFormats/PatCandidates"/>
   <use   name="DataFormats/VertexReco"/>
@@ -59,6 +60,15 @@
   <use   name="TauAnalysis/CandidateTools"/>
   <use   name="root"/>
 </bin>
+<bin   file="makeMEtResponseTheoryUncertaintyPlots.cc" name="makeMEtResponseTheoryUncertaintyPlots">
+  <use   name="FWCore/FWLite"/>
+  <use   name="FWCore/ParameterSet"/>
+  <use   name="FWCore/PythonParameterSet"/>
+  <use   name="FWCore/Utilities"/>
+  <use   name="PhysicsTools/FWLite"/>
+  <use   name="TauAnalysis/CandidateTools"/>
+  <use   name="root"/>
+</bin>
 <bin   file="fitSysMEtShift.cc" name="fitSysMEtShift">
   <use   name="FWCore/FWLite"/>
   <use   name="FWCore/ParameterSet"/>
@@ -67,4 +77,39 @@
   <use   name="PhysicsTools/FWLite"/>
   <use   name="TauAnalysis/CandidateTools"/>
   <use   name="root"/>
+</bin>
+<bin   file="calibUnclusteredEnergy.cc" name="calibUnclusteredEnergy">
+  <use   name="FWCore/FWLite"/>
+  <use   name="FWCore/ParameterSet"/>
+  <use   name="FWCore/PythonParameterSet"/>
+  <use   name="FWCore/Utilities"/>
+  <use   name="CondFormats/JetMETObjects"/>
+  <use   name="DataFormats/Candidate"/>
+  <use   name="PhysicsTools/FWLite"/>
+  <use   name="TauAnalysis/CandidateTools"/>
+  <use   name="root"/>
+</bin>
+<bin   file="FWLiteUnclusteredEnergyAnalyzer.cc" name="FWLiteUnclusteredEnergyAnalyzer">
+  <use   name="FWCore/FWLite"/>
+  <use   name="FWCore/ParameterSet"/>
+  <use   name="FWCore/PythonParameterSet"/>
+  <use   name="FWCore/Utilities"/>
+  <use   name="CondFormats/JetMETObjects"/>
+  <use   name="DataFormats/Candidate"/>
+  <use   name="PhysicsTools/FWLite"/>
+  <use   name="TauAnalysis/CandidateTools"/>
+  <use   name="root"/>
+</bin>
+<bin   file="trainMVAMEt.cc" name="trainMVAMEt">
+  <use   name="FWCore/FWLite"/>
+  <use   name="FWCore/ParameterSet"/>
+  <use   name="FWCore/PythonParameterSet"/>
+  <use   name="FWCore/Utilities"/>
+  <use   name="CondFormats/EgammaObjects"/>
+  <use   name="DataFormats/Candidate"/>
+  <use   name="PhysicsTools/FWLite"/>
+  <use   name="TauAnalysis/CandidateTools"/>
+  <use   name="TauAnalysis/RecoTools"/>
+  <use   name="root"/>
+  <use   name="roottmva"/>
 </bin>

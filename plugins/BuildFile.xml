@@ -9,6 +9,7 @@
   <use   name="FWCore/ServiceRegistry"/>
   <use   name="MagneticField/Engine"/>
   <use   name="MagneticField/Records"/>
+  <use   name="DataFormats/CaloTowers"/>
   <use   name="DataFormats/Candidate"/>
   <use   name="DataFormats/Common"/>
   <use   name="DataFormats/MuonReco"/>

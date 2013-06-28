@@ -230,9 +230,8 @@ double VertexMultiplicityReweightExtractor::operator()(const edm::Event& evt) co
       // CV: in-time PU is stored in getBunchCrossing = 0, 
       //    cf. https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupInformation
       int bx = genPileUpInfo->getBunchCrossing();
-      //std::cout << "bx = " << bx << std::endl;
-      //int numPileUp = genPileUpInfo->getPU_NumInteractions();
-      int numPileUp = genPileUpInfo->getTrueNumInteractions();
+      //std::cout << "bx = " << bx << ": numPileUpInteractions = " << genPileUpInfo->getPU_NumInteractions() << " (true = " << genPileUpInfo->getTrueNumInteractions() << ")" << std::endl;
+      int numPileUp = genPileUpInfo->getPU_NumInteractions();
       if      ( bx == bxPrevious_ ) numPileUp_bxPrevious = numPileUp;
       else if ( bx ==  0          ) numPileUp_inTime     = numPileUp;
       else if ( bx == bxNext_     ) numPileUp_bxNext     = numPileUp;

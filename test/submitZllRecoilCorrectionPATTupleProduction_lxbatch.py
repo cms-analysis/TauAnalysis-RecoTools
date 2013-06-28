@@ -6,129 +6,203 @@ from TauAnalysis.Configuration.tools.jobtools import make_bsub_script
 from TauAnalysis.Configuration.tools.harvestingLXBatch import make_harvest_scripts
 
 import os
+import random
 import re
 import socket
 import time
 
 configFile = 'produceZllRecoilCorrectionPATTuple_cfg.py'
 
-version = 'v7_05wHCALlaserFilter'
+version = 'v11_1'
 
 samples = {
-    'Data_runs190456to193621' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
+    ##'Data_runs190456to193621' : {
+    ##    'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
+    ##    'numInputFilesPerJob' : 5,
+    ##    'HLTprocessName' : 'HLT',
+    ##    'conditions' : 'GR_P_V39_AN3::All',
+    ##    'isMC' : False
+    ##},
+    ##'Data_runs193834to196531' : {
+    ##    'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
+    ##    'numInputFilesPerJob' : 3,
+    ##    'HLTprocessName' : 'HLT',
+    ##    'conditions' : 'GR_P_V39_AN3::All',
+    ##    'isMC' : False
+    ##},
+    ##'Data_runs190782to190949_recover' : {
+    ##    'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
+    ##    'numInputFilesPerJob' : 3,
+    ##    'HLTprocessName' : 'HLT',
+    ##    'conditions' : 'GR_P_V39_AN3::All',
+    ##    'isMC' : False
+    ##},
+    ##'Data_runs198022to198523' : {
+    ##    'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
+    ##    'numInputFilesPerJob' : 3,
+    ##    'HLTprocessName' : 'HLT',
+    ##    'conditions' : 'GR_P_V40_AN3::All',
+    ##    'isMC' : False
+    ##},
+    ##'Data_runs198934to202016' : {
+    ##    'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
+    ##    'numInputFilesPerJob' : 3,
+    ##    'HLTprocessName' : 'HLT',
+    ##    'conditions' : 'GR_P_V41_AN3::All',
+    ##    'isMC' : False
+    ##},
+    ##'Data_runs202044to203002' : {
+    ##    'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
+    ##    'numInputFilesPerJob' : 3,
+    ##    'HLTprocessName' : 'HLT',
+    ##    'conditions' : 'GR_P_V41_AN3::All',
+    ##    'isMC' : False
+    ##},
+    ##'Data_runs203894to208686' : {
+    ##    'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
+    ##    'numInputFilesPerJob' : 2,
+    ##    'HLTprocessName' : 'HLT',
+    ##    'conditions' : 'GR_P_V42_AN3::All',
+    ##    'isMC' : False
+    ##},
+    'Data_runs190456to193621_ReReco' : {
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
         'numInputFilesPerJob' : 5,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'FT_53_V21_AN4::All',
         'isMC' : False
     },
-    'Data_runs193834to196531' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
-        'numInputFilesPerJob' : 3,
+    'Data_runs193833to196531_ReReco' : {
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
+        'numInputFilesPerJob' : 5,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'FT_53_V21_AN4::All',
         'isMC' : False
     },
-    'Data_runs190782to190949_recover' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
+    'Data_runs198022to203742_ReReco' : {
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
         'numInputFilesPerJob' : 3,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'FT_53_V21_AN4::All',
         'isMC' : False
     },
-    'Data_runs198022to198523' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
-        'numInputFilesPerJob' : 3,
+    'Data_runs203777to208686_ReReco' : {
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
+        'numInputFilesPerJob' : 2,
         'HLTprocessName' : 'HLT',
-        'isMC' : False
-    },
-    'Data_runs198934to202016v2' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
-        'numInputFilesPerJob' : 3,
-        'HLTprocessName' : 'HLT',
-        'isMC' : False
-    },
-    'Data_runs202044to203002v2' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
-        'numInputFilesPerJob' : 3,
-        'HLTprocessName' : 'HLT',
+        'conditions' : 'FT_53_V21_AN4::All',
         'isMC' : False
     },
     'ZplusJets_madgraph' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
         'numInputFilesPerJob' : 1,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'START53_V22::All',
+        'isMC' : True
+    },
+    'Zmumu_pythia' : {
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
+        'numInputFilesPerJob' : 1,
+        'HLTprocessName' : 'HLT',
+        'conditions' : 'START53_V22::All',
+        'isMC' : True
+    },
+    'Zmumu_powheg' : {
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
+        'numInputFilesPerJob' : 1,
+        'HLTprocessName' : 'HLT',
+        'conditions' : 'START53_V22::All',
         'isMC' : True
     },
     'TTplusJets_madgraph' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
         'numInputFilesPerJob' : 1,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'START53_V22::All',
         'isMC' : True
     },
     'Tbar_tW' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
         'numInputFilesPerJob' : 5,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'START53_V22::All',
         'isMC' : True
     },
     'T_tW' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
         'numInputFilesPerJob' : 5,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'START53_V22::All',
         'isMC' : True
     },    
     'PPmuXptGt20Mu15' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
         'numInputFilesPerJob' : 5,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'START53_V22::All',
         'isMC' : True
     },
     'WW' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
         'numInputFilesPerJob' : 5,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'START53_V22::All',
         'isMC' : True
     },
     'WZ' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
         'numInputFilesPerJob' : 5,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'START53_V22::All',
         'isMC' : True
     },
     'ZZ' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
         'numInputFilesPerJob' : 5,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'START53_V22::All',
         'isMC' : True
     },
     'WplusJets_madgraph' : {
-        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2012Oct09/',
+        'skimFilePath' : '/store/user/veelken/CMSSW_5_3_x/skims/GoldenZmumu/2013Feb14/',
         'numInputFilesPerJob' : 5,
         'HLTprocessName' : 'HLT',
+        'conditions' : 'START53_V22::All',
         'isMC' : True
     }
 }
 
-runPeriod = '2012RunABC'
+runPeriod = '2012RunABCD'
 
 lxbatch_queue = '1nw'
 ##lxbatch_queue = '1nd'
 ##lxbatch_queue = '8nh'
 
 samplesToAnalyze = [
-    'Data_runs190456to193621',
-    'Data_runs193834to196531',
-    'Data_runs190782to190949_recover',
-    'Data_runs198022to198523',
-    'Data_runs198934to202016v2',
-    'Data_runs202044to203002v2',
+    # CV: start first Z+jets and TTbar samples,
+    #     as they take the longest time to process 
     'ZplusJets_madgraph',
+    #'Zmumu_pythia',
+    #'Zmumu_powheg',
     'TTplusJets_madgraph',
     'Tbar_tW',
     'T_tW',
-    'PPmuXptGt20Mu15',
+    ##'PPmuXptGt20Mu15',
     'WW',
     'WZ',
     'ZZ',
-    'WplusJets_madgraph'
+    ##'WplusJets_madgraph',
+    ##'Data_runs190456to193621',
+    ##'Data_runs193834to196531',
+    ##'Data_runs190782to190949_recover',
+    ##'Data_runs198022to198523',
+    ##'Data_runs198934to202016',
+    ##'Data_runs202044to203002',
+    ##'Data_runs203894to208686'
+    'Data_runs190456to193621_ReReco',
+    'Data_runs193833to196531_ReReco',
+    'Data_runs198022to203742_ReReco',
+    'Data_runs203777to208686_ReReco'
 ]
 
 skipExistingPATtuples = True
@@ -235,6 +309,7 @@ def customizeConfigFile(sampleName, jobId, version, inputFileNames, cfgFileName_
     HLTprocessName = samples[sampleName]['HLTprocessName']
     cfg_modified = cfg_modified.replace("#HLTprocessName#", "'%s'" % HLTprocessName)
     cfg_modified = cfg_modified.replace("#runPeriod#", "'%s'" % runPeriod)
+    cfg_modified = cfg_modified.replace("#globaltag#", "'%s'" % samples[sampleName]['conditions'])
 
     cfg_modified += "\n"
     cfg_modified += "process.source.fileNames = cms.untracked.vstring(%s)\n" % \
@@ -420,19 +495,33 @@ for sampleToAnalyze in samplesToAnalyze:
             print "Output files for sample = %s, jobId = %s exist --> skipping !!" % (sampleToAnalyze, jobId)
         else:
             jobsZllRecoilCorrectionPATtupleProduction.append(bsubJobNames[sampleToAnalyze][jobId])
-    jobsZllRecoilCorrectionPATtupleProduction.append(bsubJobNames_harvesting[sampleToAnalyze])        
+    jobsZllRecoilCorrectionPATtupleProduction.append(bsubJobNames_harvesting[sampleToAnalyze])
+#--------------------------------------------------------------------------------    
+# CV: randomize jobs in order for ucdavis getting overloaded with file transfers
+#     initiated by too many jobs finishing all at the same time
+random.shuffle(jobsZllRecoilCorrectionPATtupleProduction)
+jobDependencyDict = {}
+for jobIdx in range(len(jobsZllRecoilCorrectionPATtupleProduction)):
+    if jobIdx >= 1:
+        jobDependencyDict[jobsZllRecoilCorrectionPATtupleProduction[jobIdx]] = jobsZllRecoilCorrectionPATtupleProduction[jobIdx - 1]
+    else:
+        jobDependencyDict[jobsZllRecoilCorrectionPATtupleProduction[jobIdx]] = ""
+#--------------------------------------------------------------------------------
 makeFile.write("all: %s\n" % make_MakeFile_vstring(jobsZllRecoilCorrectionPATtupleProduction))
 makeFile.write("\techo 'Finished running ZllRecoilCorrectionPATTupleProduction.'\n")
 makeFile.write("\n")
 for sampleToAnalyze in samplesToAnalyze:
     for jobId in bsubScriptFileNames[sampleToAnalyze].keys():
         if bsubJobNames[sampleToAnalyze][jobId] in jobsZllRecoilCorrectionPATtupleProduction:
-            makeFile.write("%s:\n" % bsubJobNames[sampleToAnalyze][jobId])
+            makeFile.write("%s: %s\n" %
+              (bsubJobNames[sampleToAnalyze][jobId],
+               jobDependencyDict[bsubJobNames[sampleToAnalyze][jobId]]))
             makeFile.write("\t%s -q %s -J %s < %s\n" %
               (executable_bsub,
                lxbatch_queue,
                bsubJobNames[sampleToAnalyze][jobId],
                bsubScriptFileNames[sampleToAnalyze][jobId]))
+            makeFile.write("\tsleep 1\n")
     makeFile.write("\n")
 for sampleToAnalyze in samplesToAnalyze:
     bsubJobNames_sample = []
@@ -465,4 +554,4 @@ makeFile.write("\techo 'Finished deleting old files.'\n")
 makeFile.write("\n")
 makeFile.close()
 
-print("Finished building Makefile. Now execute 'make -j 8 -f %s'." % makeFileName)
+print("Finished building Makefile. Now execute 'make -f %s'." % makeFileName)

@@ -100,10 +100,10 @@ int main(int argc, const char* argv[])
   samples.push_back("Data");
   samples.push_back("ZplusJets_madgraph");
 
-  std::string runPeriod = "2012RunABC";
+  std::string runPeriod = "2012RunABCD";
 
   std::string inputFilePath;
-  if ( runPeriod == "2012RunABC" ) inputFilePath = "/data1/veelken/tmp/ZllRecoilCorrection/v7_00_woMEtShiftCorr_pfMEtCov/2012RunABC/";
+  if ( runPeriod == "2012RunABCD" ) inputFilePath = "/data1/veelken/tmp/ZllRecoilCorrection/v11_0_wMEtShiftCorr_1/2012RunABCD/";
   else assert(0);
 
   std::map<std::string, std::string> inputFileNames; // key = sample
@@ -113,13 +113,17 @@ int main(int argc, const char* argv[])
   std::map<std::string, vstring> metTypes; // key = sample
   //metTypes["Data"].push_back("pfMEtTypeIcorrectedSmeared");
   //metTypes["Data"].push_back("pfMEtNoPileUpSmeared");
-  //metTypes["Data"].push_back("pfMEtMVASmeared");
-  metTypes["Data"].push_back("caloMEtTypeIcorrected");
+  metTypes["Data"].push_back("pfMEtMVASmeared");
+  metTypes["Data"].push_back("pfMEtMVAunityResponseSmeared");
+  //metTypes["Data"].push_back("caloMEtNoHF");
+  //metTypes["Data"].push_back("caloMEtTypeIcorrected");
   //metTypes["ZplusJets_madgraph"].push_back("pfMEtTypeIcorrectedSmeared");
   //metTypes["ZplusJets_madgraph"].push_back("pfMEtNoPileUpSmeared");
-  //metTypes["ZplusJets_madgraph"].push_back("pfMEtMVASmeared");
-  metTypes["ZplusJets_madgraph"].push_back("caloMEtTypeIcorrected");
-  
+  metTypes["ZplusJets_madgraph"].push_back("pfMEtMVASmeared");
+  metTypes["ZplusJets_madgraph"].push_back("pfMEtMVAunityResponseSmeared");
+  //metTypes["ZplusJets_madgraph"].push_back("caloMEtNoHF");
+  //metTypes["ZplusJets_madgraph"].push_back("caloMEtTypeIcorrected");
+    
   for ( vstring::const_iterator sample = samples.begin();
 	sample != samples.end(); ++sample ) {
     for ( vstring::const_iterator metType = metTypes[*sample].begin();

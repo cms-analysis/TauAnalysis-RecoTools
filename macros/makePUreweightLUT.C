@@ -281,20 +281,22 @@ void makePUreweightLUT()
   canvas->SetBorderSize(2);
   canvas->SetLogy();
 
-  TString inputFilePath = "rfio:/castor/cern.ch/user/v/veelken/CMSSW_4_2_x/PATtuples/ZllRecoilCorrection/v4_1/";
-  //TString inputFilePath = "/afs/cern.ch/user/v/veelken/scratch0/CMSSW_4_2_4_patch1/src/TauAnalysis/RecoTools/macros/";
+  TString inputFilePath = "/data2/veelken/CMSSW_5_3_x/PATtuples/ZllRecoilCorrection/v7_11wHCALlaserFilter/";
 
-  TString histoLUTname = "DQMData/producePUreweightHistogramsKt6PFNeutralJets3d/RhoVsVtxMultiplicity";
+  TString histoLUTname = "DQMData/producePUreweightHistogramsKt6PFNeutralJets/RhoVsVtxMultiplicity";
 
   TObjArray inputFileNames_data;
-  inputFileNames_data.Add(new TObjString("ZllRecoilCorrection_Data_runs160329to163869_v4_1_layer_2_job_0_eca.root"));
-  inputFileNames_data.Add(new TObjString("ZllRecoilCorrection_Data_runs165071to167913_v4_1_layer_2_job_0_fc8.root"));
-  inputFileNames_data.Add(new TObjString("ZllRecoilCorrection_Data_runs170053to172619_v4_1_layer_2_job_0_fc1.root"));
+  inputFileNames_data.Add(new TObjString("ZllRecoilCorrectionPUreweightHistograms_Data_runs190456to193621_v7_11wHCALlaserFilter_all.root"));
+  inputFileNames_data.Add(new TObjString("ZllRecoilCorrectionPUreweightHistograms_Data_runs190782to190949_recover_v7_11wHCALlaserFilter_all.root"));
+  inputFileNames_data.Add(new TObjString("ZllRecoilCorrectionPUreweightHistograms_Data_runs193834to196531_v7_11wHCALlaserFilter_all.root"));
+  inputFileNames_data.Add(new TObjString("ZllRecoilCorrectionPUreweightHistograms_Data_runs198022to198523_v7_11wHCALlaserFilter_all.root"));
+  inputFileNames_data.Add(new TObjString("ZllRecoilCorrectionPUreweightHistograms_Data_runs202044to203002v2_v7_11wHCALlaserFilter_all.root"));
+  inputFileNames_data.Add(new TObjString("ZllRecoilCorrectionPUreweightHistograms_Data_runs203894to208686_v7_11wHCALlaserFilter_all.root"));
   TH1* histogram_data = getHistogram(histoLUTname, "Data", inputFilePath, inputFileNames_data); 
   std::cout << "histogram_data = " << histogram_data << std::endl;
 
   TObjArray inputFileNames_mc;
-  inputFileNames_mc.Add(new TObjString("ZllRecoilCorrection_simDYtoMuMu_v4_1_layer_2_job_0_d22.root"));
+  inputFileNames_mc.Add(new TObjString("ZllRecoilCorrectionPUreweightHistograms_ZplusJets_madgraph_v7_11wHCALlaserFilter_all.root"));
   TH1* histogram_mc = getHistogram(histoLUTname, "MC", inputFilePath, inputFileNames_mc); 
   std::cout << "histogram_mc = " << histogram_mc << std::endl;
 

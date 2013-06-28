@@ -3,79 +3,80 @@
 import os
 
 samplesToAnalyze = [
-    'Data_runs190456to193621',
-    'Data_runs193834to196531',
-    'Data_runs190782to190949_recover',
-    'Data_runs198022to198523',
-    'Data_runs198934to202016',
-    'Data_runs202044to203002',
-    'Data_runs203894to208686',
+    ##'Data_runs190456to193621',
+    ##'Data_runs193834to196531',
+    ##'Data_runs190782to190949_recover',
+    ##'Data_runs198022to198523',
+    ##'Data_runs198934to202016',
+    ##'Data_runs202044to203002',
+    ##'Data_runs203894to208686'
+    'Data_runs190456to193621_ReReco',
+    'Data_runs193833to196531_ReReco',
+    'Data_runs198022to203742_ReReco',
+    'Data_runs203777to208686_ReReco',
     'ZplusJets_madgraph'
 ]
 
-version = 'v9_07_2013May01'
+version = 'v2_0'
 
 metTypes_Data = {
-    'caloTowers' : {
-        ##'jobs'                 : [ 'central', 'wCalibration' ],
-        'jobs'                 : [ 'central' ],
-        'type1JetPtThresholds' : [ 0. ]
-    },
-    'caloTowersNoHF' : {
-        ##'jobs'                 : [ 'central', 'wCalibration' ],
-        'jobs'                 : [ 'central' ],
-        'type1JetPtThresholds' : [ 0. ]
-    },
+##     'caloTowers' : {
+##         'jobs'                 : [ 'central' ],
+##         'type1JetPtThresholds' : [ 0. ]
+##     },
+##     'caloTowersNoHF' : {
+##         'jobs'                 : [ 'central' ],
+##         'type1JetPtThresholds' : [ 0. ]
+##     },
     'pfCands' : {
-        ##'jobs'                 : [ 'central', 'wCalibration' ],
         'jobs'                 : [ 'central' ],
         'type1JetPtThresholds' : [ 0. ]
     },
     'pfJetsPlusCandsNotInJet' : {
-        ##'jobs'                 : [ 'central', 'wCalibration' ],
         'jobs'                 : [ 'central' ],
         'type1JetPtThresholds' : [ 10., 15., 20. ]
     },
-    'tracks' : {
-        ##'jobs'                 : [ 'central', 'wCalibration' ],
-        'jobs'                 : [ 'central' ],
-        'type1JetPtThresholds' : [ 0. ]
-    }
+##     'tracks' : {
+##         'jobs'                 : [ 'central' ],
+##         'type1JetPtThresholds' : [ 0. ]
+##     }
 }
 
 metTypes_MC = {
-    'caloTowers' : {
-        'jobs'                 : [ 'central', 'shiftUp', 'shiftDown' ],
-        'type1JetPtThresholds' : [ 0. ]
-    },        
-    'caloTowersNoHF' : {
-        'jobs'                 : [ 'central', 'shiftUp', 'shiftDown' ],
-        'type1JetPtThresholds' : [ 0. ]
-    },
+##     'caloTowers' : {
+##         'jobs'                 : [ 'central', 'shiftUp', 'shiftDown' ],
+##         'type1JetPtThresholds' : [ 0. ]
+##     },        
+##     'caloTowersNoHF' : {
+##         'jobs'                 : [ 'central', 'shiftUp', 'shiftDown' ],
+##         'type1JetPtThresholds' : [ 0. ]
+##     },
     'pfCands' : {
-        'jobs'                 : [ 'central', 'shiftUp', 'shiftDown' ],
+        'jobs'                 : [ 'central', 'shiftUp', 'shiftDown', 'wCalibration' ],
         'type1JetPtThresholds' : [ 0. ]
     },
     'pfJetsPlusCandsNotInJet' : {
-        'jobs'                 : [ 'central', 'shiftUp', 'shiftDown' ],
+        'jobs'                 : [ 'central', 'shiftUp', 'shiftDown', 'wCalibration' ],
         'type1JetPtThresholds' : [ 10., 15., 20. ]
     },
-    'tracks' : {
-        'jobs'                 : [ 'central' ],
-        'type1JetPtThresholds' : [ 0. ]
-    },
-    'genParticles' : {
-        'jobs'                 : [ 'central' ],
-        'type1JetPtThresholds' : [ 0. ]
-    }
+##     'tracks' : {
+##         'jobs'                 : [ 'central' ],
+##         'type1JetPtThresholds' : [ 0. ]
+##     },
+##     'genParticles' : {
+##         'jobs'                 : [ 'central' ],
+##         'type1JetPtThresholds' : [ 0. ]
+##     }
 }
 
 configFile = 'FWLiteUnclusteredEnergyAnalyzer_cfg.py'
 executable_FWLiteUnclusteredEnergyAnalyzer = 'FWLiteUnclusteredEnergyAnalyzer'
 executable_hadd = 'hadd'
-executable_rm = 'rm'
+executable_rm = 'rm -f'
 
-outputFilePath = "/data2/veelken/CMSSW_5_3_x/Ntuples/unclEnCalibration/plots/%s/" % version
+nice = 'nice '
+
+outputFilePath = "/data2/veelken/CMSSW_5_3_x/Ntuples/unclEnCalibration/plots/%s_1/" % version
 
 # create outputFilePath in case it does not yet exist
 def createFilePath_recursively(filePath):
@@ -124,8 +125,9 @@ def customizeConfigFile(sample, metType, version, shiftBy, type1JetPtThreshold, 
 #--------------------------------------------------------------------------------
 # Build config files
 
-commandsToRun = {} # key = metType
-outputFileNames = {} # key = metType
+cfgFileNames_analyzer = {} # key = outputFileName
+logFileNames_analyzer = {} # key = outputFileName
+outputFileNames_analyzer = {} # key = metType
 for sampleToAnalyze in samplesToAnalyze:
     metTypes = None
     if sampleToAnalyze.find("Data") != -1:
@@ -175,23 +177,27 @@ for sampleToAnalyze in samplesToAnalyze:
                 outputFileName = outputFileName.replace("FWLiteUnclusteredEnergyAnalyzer", "UnclusteredEnergyAnalyzer")
                 outputFileName = os.path.join(outputFilePath, outputFileName)
                 print " outputFileName = '%s'" % outputFileName
-
+                
                 customizeConfigFile(sampleToAnalyze, metType, version, shiftBy, type1JetPtThreshold, applyResidualCorr, outputFileName, cfgFileName_original, cfgFileName_modified)
                 
                 logFileName = outputFileName
                 logFileName = logFileName.replace(".root", ".out")
-                
-                if not metType in commandsToRun.keys():
-                    commandsToRun[metType] = []
-                command = 'nice %s %s >&! %s' % (executable_FWLiteUnclusteredEnergyAnalyzer, cfgFileName_modified, logFileName)
-                print "--> command = '%s'" % command
-                commandsToRun[metType].append(command)
 
-                if not metType in outputFileNames.keys():
-                    outputFileNames[metType] = []
-                outputFileNames[metType].append(outputFileName)
+                cfgFileNames_analyzer[outputFileName] = cfgFileName_modified
+                logFileNames_analyzer[outputFileName] = logFileName
+                if not metType in outputFileNames_analyzer.keys():
+                    outputFileNames_analyzer[metType] = []
+                outputFileNames_analyzer[metType].append(outputFileName)
 
-def make_vstring(list_of_strings):
+inputFileNames_hadd = {}
+outputFileNames_hadd = {}
+for metType in outputFileNames_analyzer.keys():
+    print "configuring new '%s' for: metType = %s" % (executable_hadd, metType)
+    inputFileNames_hadd[metType] = outputFileNames_analyzer[metType]
+    outputFileName_hadd = os.path.join(outputFilePath, "UnclusteredEnergyAnalyzer_all_%s.root" % metType)
+    outputFileNames_hadd[metType] = outputFileName_hadd
+
+def make_MakeFile_vstring(list_of_strings):
     retVal = ""
     for i, string_i in enumerate(list_of_strings):
         if i > 0:
@@ -199,25 +205,41 @@ def make_vstring(list_of_strings):
         retVal += string_i
     return retVal
 
-for metType in outputFileNames.keys():
-    print "configuring new '%s' for: metType = %s" % (executable_hadd, metType)
-    outputFileName_hadd = os.path.join(outputFilePath, "UnclusteredEnergyAnalyzer_all_%s.root" % metType)
-    command = '%s %s' % (executable_rm, outputFileName_hadd)
-    print "--> command = '%s'" % command
-    commandsToRun[metType].append(command)
-    command = '%s %s %s' % (executable_hadd, outputFileName_hadd, make_vstring(outputFileNames[metType]))
-    print "--> command = '%s'" % command
-    commandsToRun[metType].append(command)
-   
-shellScriptName = os.path.join(configFilePath, "runUnclusteredEnergyAnalysis.sh")
-shellScript = open(shellScriptName, "w")
-shellScript.write("#!/bin/csh -f\n")
-shellScript.write("\n")
-for metType in commandsToRun.keys():
-    for command in commandsToRun[metType]:
-        shellScript.write("%s\n" % command)
-shellScript.write("echo 'Finished running UnclusteredEnergyAnalysis.'\n")
-shellScript.write("\n")
-shellScript.close()
+# done building config files, now build Makefile...
+makeFileName = os.path.join(configFilePath, "Makefile_runUnclusteredEnergyAnalysis_%s" % version)
+makeFile = open(makeFileName, "w")
+makeFile.write("\n")
+outputFileNames = []
+for metType, outputFileName_hadd in outputFileNames_hadd.items():
+    outputFileNames.append(outputFileName_hadd)
+makeFile.write("all: %s\n" % make_MakeFile_vstring(outputFileNames))
+makeFile.write("\techo 'Finished analyzing Ntuples for unclustered energy Calibration.'\n")
+makeFile.write("\n")
+for metType, outputFileName_hadd in outputFileNames_hadd.items():
+    makeFile.write("%s: %s\n" %
+      (outputFileName_hadd,
+       make_MakeFile_vstring(inputFileNames_hadd[metType])))
+    makeFile.write("\t%s%s %s %s\n" %
+      (nice, executable_hadd,
+       outputFileName_hadd, make_MakeFile_vstring(inputFileNames_hadd[metType])))
+    for inputFileName_hadd in inputFileNames_hadd[metType]:
+        makeFile.write("%s: %s\n" %
+          (inputFileName_hadd,
+           ""))
+        makeFile.write("\t%s%s %s &> %s\n" %
+          (nice, executable_FWLiteUnclusteredEnergyAnalyzer,
+           cfgFileNames_analyzer[inputFileName_hadd],
+           logFileNames_analyzer[inputFileName_hadd]))
+makeFile.write("\n")
+makeFile.write(".PHONY: clean\n")
+makeFile.write("clean:\n")
+makeFile.write("\t%s %s\n" % (executable_rm, make_MakeFile_vstring(outputFileNames)))
+inputFileNames = []
+for metType in outputFileNames_hadd.keys():
+    inputFileNames.extend(inputFileNames_hadd[metType])
+makeFile.write("\t%s %s\n" % (executable_rm, make_MakeFile_vstring(inputFileNames)))    
+makeFile.write("\techo 'Finished deleting old files.'\n")
+makeFile.write("\n")
+makeFile.close()
 
-print("Finished building shell script. Now execute 'source %s'." % shellScriptName)
+print("Finished building Makefile. Now execute 'make -j 8 -f %s'." % makeFileName)

@@ -94,10 +94,10 @@ TGraphErrors* compMEtResponse_vs_PileUp(TFile* inputFile,
   std::cout << " " << data_or_mcType.Data() << " " << runPeriod.Data() << std::endl;
 
   int numVertices = 0;
-  if      ( std::string(runPeriod.Data()) == "2011runA"   ) numVertices = 24;
-  else if ( std::string(runPeriod.Data()) == "2011runB"   ) numVertices = 24;
-  else if ( std::string(runPeriod.Data()) == "2012runA"   ) numVertices = 34;
-  else if ( std::string(runPeriod.Data()) == "2012runABC" ) numVertices = 34;
+  if      ( std::string(runPeriod.Data()) == "2011runA"    ) numVertices = 24;
+  else if ( std::string(runPeriod.Data()) == "2011runB"    ) numVertices = 24;
+  else if ( std::string(runPeriod.Data()) == "2012runA"    ) numVertices = 34;
+  else if ( std::string(runPeriod.Data()) == "2012runABCD" ) numVertices = 34;
   else assert(0);
 
   TGraphErrors* graph = new TGraphErrors(numVertices);
@@ -212,7 +212,7 @@ TGraphErrors* compMEtResponse_vs_PileUp_mc(TFile* inputFile, const std::string& 
   processes.Add(new TObjString("WW"));
   processes.Add(new TObjString("WZ"));
   processes.Add(new TObjString("ZZ"));
-  processes.Add(new TObjString("QCD"));
+  //processes.Add(new TObjString("QCD"));
   double p0 = p0_mc;
   if ( central_or_shift == "vertexRecoEff_p0Up"   ) p0 += p0ErrUp_mc;
   if ( central_or_shift == "vertexRecoEff_p0Down" ) p0 -= p0ErrDown_mc;
@@ -240,10 +240,10 @@ TGraphErrors* compMEtResolution_vs_PileUp(TFile* inputFile,
   std::cout << " " << data_or_mcType.Data() << " " << runPeriod.Data() << " " << projection.Data() << std::endl;
 
   int numVertices = 0;
-  if      ( std::string(runPeriod.Data()) == "2011runA"   ) numVertices = 24;
-  else if ( std::string(runPeriod.Data()) == "2011runB"   ) numVertices = 24;
-  else if ( std::string(runPeriod.Data()) == "2012runA"   ) numVertices = 34;
-  else if ( std::string(runPeriod.Data()) == "2012runABC" ) numVertices = 34;
+  if      ( std::string(runPeriod.Data()) == "2011runA"    ) numVertices = 24;
+  else if ( std::string(runPeriod.Data()) == "2011runB"    ) numVertices = 24;
+  else if ( std::string(runPeriod.Data()) == "2012runA"    ) numVertices = 34;
+  else if ( std::string(runPeriod.Data()) == "2012runABCD" ) numVertices = 34;
   else assert(0);
 
   TGraphErrors* graph = new TGraphErrors(numVertices);
@@ -421,7 +421,7 @@ TGraphErrors* compMEtResolution_vs_PileUp_mc(TFile* inputFile, const std::string
   processes.Add(new TObjString("WW"));
   processes.Add(new TObjString("WZ"));
   processes.Add(new TObjString("ZZ"));
-  processes.Add(new TObjString("QCD"));
+  //processes.Add(new TObjString("QCD"));
   double p0 = p0_mc;
   if ( central_or_shift == "vertexRecoEff_p0Up"   ) p0 += p0ErrUp_mc;
   if ( central_or_shift == "vertexRecoEff_p0Down" ) p0 -= p0ErrDown_mc;
@@ -452,7 +452,7 @@ TF1* fitMEtResponse_vs_PileUp(TGraph* graph, const TString& runPeriod)
   } else if ( std::string(runPeriod.Data()) == "2012runA" ) {
     xMin =  7.;
     xMax = 20.;
-  } else if ( std::string(runPeriod.Data()) == "2012runABC" ) {
+  } else if ( std::string(runPeriod.Data()) == "2012runABCD" ) {
     xMin =  4.;
     xMax = 25.;
   } else assert(0);
@@ -479,7 +479,7 @@ TF1* fitMEtResolution_vs_PileUp(TGraph* graph, const TString& runPeriod)
   } else if ( std::string(runPeriod.Data()) == "2012runA" ) {
     xMin =  7.;
     xMax = 20.;
-  } else if ( std::string(runPeriod.Data()) == "2012runABC" ) {
+  } else if ( std::string(runPeriod.Data()) == "2012runABCD" ) {
     xMin =  4.;
     xMax = 25.;
   } else assert(0);
@@ -1130,20 +1130,20 @@ int main(int argc, const char* argv[])
   TBenchmark clock;
   clock.Start("makeMEtResolution_vs_PileUpPlots");
 
-  TString inputFilePath1 = "/data1/veelken/tmp/ZllRecoilCorrection/v7_00_wMEtShiftCorr_pfMEtCov_2/2012RunABC/";
+  TString inputFilePath1 = "/data1/veelken/tmp/ZllRecoilCorrection/v9_07_woMEtShiftCorr_1/2012RunABCD/";
   TString inputFileName1 = "analyzeZllRecoilCorrectionHistograms_all_pfMEtTypeIcorrectedSmeared.root";
   TString legendEntry1   = "corr. PFMEt";
-  TString runPeriod1     = "2012runABC";
+  TString runPeriod1     = "2012runABCD";
 
-  TString inputFilePath2 = "/data1/veelken/tmp/ZllRecoilCorrection/v7_00_wMEtShiftCorr_pfMEtCov_2/2012RunABC/";
+  TString inputFilePath2 = "/data1/veelken/tmp/ZllRecoilCorrection/v9_07_woMEtShiftCorr_1/2012RunABCD/";
   TString inputFileName2 = "analyzeZllRecoilCorrectionHistograms_all_pfMEtNoPileUpSmeared.root";
   TString legendEntry2   = "No-PU MEt";
-  TString runPeriod2     = "2012runABC";
+  TString runPeriod2     = "2012runABCD";
 
-  TString inputFilePath3 = "/data1/veelken/tmp/ZllRecoilCorrection/v7_00_wMEtShiftCorr_pfMEtCov_2/2012RunABC/";
+  TString inputFilePath3 = "/data1/veelken/tmp/ZllRecoilCorrection/v9_07_woMEtShiftCorr_1/2012RunABCD/";
   TString inputFileName3 = "analyzeZllRecoilCorrectionHistograms_all_pfMEtMVASmeared.root";
   TString legendEntry3   = "MVA MEt";
-  TString runPeriod3     = "2012runABC";
+  TString runPeriod3     = "2012runABCD";
 
   TFile* inputFile1 = new TFile(getFileName_full(inputFilePath1, inputFileName1));
   TFile* inputFile2 = new TFile(getFileName_full(inputFilePath2, inputFileName2));

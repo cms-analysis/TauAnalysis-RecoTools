@@ -7,9 +7,9 @@
  *
  * \author Christian Veelken, UC Davis
  *
- * \version $Revision: 1.14 $
+ * \version $Revision: 1.1 $
  *
- * $Id: NoPileUpMEtInputHistManager.h,v 1.14 2012/05/04 15:57:38 veelken Exp $
+ * $Id: NoPileUpMEtInputHistManager.h,v 1.1 2012/08/28 15:01:37 veelken Exp $
  *
  */
 
@@ -58,6 +58,7 @@ class NoPileUpMEtInputHistManager
  private:
 
   edm::InputTag src_;
+  edm::InputTag srcSF_;
 
   typedef std::vector<std::string> vstring;
   vstring inputsToPlot_;
@@ -86,7 +87,7 @@ class NoPileUpMEtInputHistManager
       histogramPt_->Fill(metData->met, evtWeight);
 
       int errorFlag = 0;
-      std::pair<double, double> uT = compMEtProjU(ZllCandP4, metData->mex, metData->mey, errorFlag);
+      std::pair<double, double> uT = compMEtProjU(ZllCandP4, metData->mex, metData->mey, errorFlag, false);
       if ( !errorFlag ) {
 	double uParl = uT.first;
 	double uPerp = uT.second;
@@ -109,6 +110,8 @@ class NoPileUpMEtInputHistManager
   };
 
   std::vector<histogramEntryType*> histogramEntries_;
+
+  TH1* histogramSF_;
 
   std::vector<TH1*> histograms_;
 };

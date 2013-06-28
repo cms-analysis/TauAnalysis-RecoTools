@@ -956,6 +956,17 @@ struct plotUvsQtNumObjType
   std::string legendEntryMC_;
 };
 
+namespace
+{
+  void saveAllGraphs(const std::vector<TGraphAsymmErrors*>& graphs)
+  {
+    for ( std::vector<TGraphAsymmErrors*>::const_iterator graph = graphs.begin();
+	  graph != graphs.end(); ++graph ) {
+      (*graph)->Write();
+    }
+  }
+}
+
 void fitAndMakeControlPlots(plotUvsQtNumObjType* plotUvsQtNumObj, const std::string& outputFileName)
 {
   const double xMin_qT    =    0.;
@@ -1061,20 +1072,34 @@ void fitAndMakeControlPlots(plotUvsQtNumObjType* plotUvsQtNumObj, const std::str
 
   TH1* dummyHistogram_qT = new TH1D("dummyHistogram_qT", "dummyHistogram_qT", (xMax_qT - xMin_qT)/10., xMin_qT, xMax_qT);
   TH1* dummyHistogram_sumEt = new TH1D("dummyHistogram_sumEt", "dummyHistogram_sumEt", (xMax_sumEt - xMin_sumEt)/10., xMin_sumEt, xMax_sumEt);  
-
+  
   drawZllRecoilFitResult(canvas, dummyHistogram_qT, plotUvsQtNumObj->plotLabel_, 
 			 plotUvsQtNumObj->graphUparlResponseData_, f_uParl_div_qT_mean_data,
-			  "Data", 0.62, 0.165, false, true, "<-u_{#parallel} /q_{T}>", 0.4, 1.2, true, 0.10,
-			 outputFileName, "uParlResponseFitData");
+			 "Data", 0.62, 0.165, false, true, "<-u_{#parallel} /q_{T}>", 0.4, 1.2, true, 0.10,
+			 outputFileName, "uParlResponseFitData_S");
   drawZllRecoilFitResult(canvas, dummyHistogram_qT, plotUvsQtNumObj->plotLabel_, 
 			 plotUvsQtNumObj->graphUparlResponseMC_signal_, f_uParl_div_qT_mean_mc_signal,
 			 "Sim. Z #rightarrow #mu^{+} #mu^{-}", 0.62, 0.165, false, true, "<-u_{#parallel} /q_{T}>", 0.4, 1.2, true, 0.10,
-			 outputFileName, "uParlResponseFitMC",
+			 outputFileName, "uParlResponseFitMCsignal_S",
 			 &plotUvsQtNumObj->graphUparlResponseMCsysUncertainty_signal_, &f_uParl_div_qT_mean_mcSysUncertainties_signal);  
   drawZllRecoilFitResult(canvas, dummyHistogram_qT, plotUvsQtNumObj->plotLabel_, 
 			 plotUvsQtNumObj->graphUparlResponseMC_, f_uParl_div_qT_mean_mc,
 			 "Simulation", 0.62, 0.165, false, true, "<-u_{#parallel} /q_{T}>", 0.4, 1.2, true, 0.10,
-			 outputFileName, "uParlResponseFitMC",
+			 outputFileName, "uParlResponseFitMC_S",
+			 &plotUvsQtNumObj->graphUparlResponseMCsysUncertainty_, &f_uParl_div_qT_mean_mcSysUncertainties); 
+  drawZllRecoilFitResult(canvas, dummyHistogram_qT, plotUvsQtNumObj->plotLabel_, 
+			 plotUvsQtNumObj->graphUparlResponseData_, f_uParl_div_qT_mean_data,
+			 "Data", 0.62, 0.165, false, true, "<-u_{#parallel} /q_{T}>", 0., 1.2, true, 0.10,
+			 outputFileName, "uParlResponseFitData_L");
+  drawZllRecoilFitResult(canvas, dummyHistogram_qT, plotUvsQtNumObj->plotLabel_, 
+			 plotUvsQtNumObj->graphUparlResponseMC_signal_, f_uParl_div_qT_mean_mc_signal,
+			 "Sim. Z #rightarrow #mu^{+} #mu^{-}", 0.62, 0.165, false, true, "<-u_{#parallel} /q_{T}>", 0., 1.2, true, 0.10,
+			 outputFileName, "uParlResponseFitMCsignal_L",
+			 &plotUvsQtNumObj->graphUparlResponseMCsysUncertainty_signal_, &f_uParl_div_qT_mean_mcSysUncertainties_signal);  
+  drawZllRecoilFitResult(canvas, dummyHistogram_qT, plotUvsQtNumObj->plotLabel_, 
+			 plotUvsQtNumObj->graphUparlResponseMC_, f_uParl_div_qT_mean_mc,
+			 "Simulation", 0.62, 0.165, false, true, "<-u_{#parallel} /q_{T}>", 0., 1.2, true, 0.10,
+			 outputFileName, "uParlResponseFitMC_L",
 			 &plotUvsQtNumObj->graphUparlResponseMCsysUncertainty_, &f_uParl_div_qT_mean_mcSysUncertainties); 
 
   drawZllRecoilFitResult(canvas, dummyHistogram_qT, plotUvsQtNumObj->plotLabel_, 
@@ -1164,13 +1189,20 @@ void fitAndMakeControlPlots(plotUvsQtNumObjType* plotUvsQtNumObj, const std::str
 			 plotUvsQtNumObj->graphMEtYvsSumEtExclMuonsData_, f_metY_vs_sumEtExclMuons_data,
 			 "Data", 0.19, 0.62, false, false, "RMS(E_{Y}^{miss} ) / GeV", 0., 75., true, 0.50,
 			 outputFileName, "metYvsSumEtExclMuonsFitData");
-
+ 
   drawData_vs_MCcomparison(canvas, dummyHistogram_qT, plotUvsQtNumObj->plotLabel_, 
 			   "Data", plotUvsQtNumObj->graphUparlResponseData_, 
 			   "Sim. Z #rightarrow #mu^{+} #mu^{-}", plotUvsQtNumObj->graphUparlResponseMC_signal_,
 			   "Simulation", plotUvsQtNumObj->graphUparlResponseMC_, 
 			   0.62, 0.165, false, true, "<-u_{#parallel} /q_{T}>", 0.4, 1.2, true, 0.20,
-			   outputFileName, "uParlResponseData_vs_MC",
+			   outputFileName, "uParlResponseData_vs_MC_S",
+			   &plotUvsQtNumObj->graphUparlResponseMCsysUncertainty_);
+  drawData_vs_MCcomparison(canvas, dummyHistogram_qT, plotUvsQtNumObj->plotLabel_, 
+			   "Data", plotUvsQtNumObj->graphUparlResponseData_, 
+			   "Sim. Z #rightarrow #mu^{+} #mu^{-}", plotUvsQtNumObj->graphUparlResponseMC_signal_,
+			   "Simulation", plotUvsQtNumObj->graphUparlResponseMC_, 
+			   0.62, 0.165, false, true, "<-u_{#parallel} /q_{T}>", 0., 1.2, true, 0.20,
+			   outputFileName, "uParlResponseData_vs_MC_L",
 			   &plotUvsQtNumObj->graphUparlResponseMCsysUncertainty_);
   drawData_vs_MCcomparison(canvas, dummyHistogram_qT, plotUvsQtNumObj->plotLabel_, 			   
 			   "Data", plotUvsQtNumObj->graphUparlResolutionData_, 
@@ -1214,7 +1246,28 @@ void fitAndMakeControlPlots(plotUvsQtNumObjType* plotUvsQtNumObj, const std::str
 			   0.19, 0.62, false, false, "RMS(E_{Y}^{miss} ) / GeV", 0., 50., true, 0.50,
 			   outputFileName, "metYvsSumEtExclMuonsData_vs_MC",
 			   &plotUvsQtNumObj->graphMEtYvsSumEtExclMuonsMCsysUncertainty_);
-  
+ 
+  size_t idx = outputFileName.find_last_of('.');
+  std::string outputFileName_graphs = std::string(outputFileName, 0, idx);
+  outputFileName_graphs.append("_graphs.root");
+  TFile* outputFile_graphs = new TFile(outputFileName_graphs.data(), "RECREATE");
+  plotUvsQtNumObj->graphUparlResponseData_->Write();
+  plotUvsQtNumObj->graphUparlResolutionData_->Write();
+  plotUvsQtNumObj->graphUperpResolutionData_->Write();
+  plotUvsQtNumObj->graphUparlResponseMC_signal_->Write();
+  plotUvsQtNumObj->graphUparlResolutionMC_signal_->Write();
+  plotUvsQtNumObj->graphUperpResolutionMC_signal_->Write();
+  plotUvsQtNumObj->graphUparlResponseMC_->Write();
+  plotUvsQtNumObj->graphUparlResolutionMC_->Write();
+  plotUvsQtNumObj->graphUperpResolutionMC_->Write();
+  saveAllGraphs(plotUvsQtNumObj->graphUparlResponseMCsysUncertainty_signal_);
+  saveAllGraphs(plotUvsQtNumObj->graphUparlResolutionMCsysUncertainty_signal_);
+  saveAllGraphs(plotUvsQtNumObj->graphUperpResolutionMCsysUncertainty_signal_);
+  saveAllGraphs(plotUvsQtNumObj->graphUparlResponseMCsysUncertainty_);
+  saveAllGraphs(plotUvsQtNumObj->graphUparlResolutionMCsysUncertainty_);
+  saveAllGraphs(plotUvsQtNumObj->graphUperpResolutionMCsysUncertainty_);
+  delete outputFile_graphs;
+
   delete f_uParl_div_qT_mean_data;
   delete f_uParl_rms_data;
   delete f_uPerp_rms_data;
@@ -1522,7 +1575,7 @@ int main(int argc, const char* argv[])
     drawHistogram1d(inputFile, *variable, directoryData, directoryMC_signal, directoryMCs_background, mcScaleFactors, runPeriod,
 		    sysShiftsUp, sysShiftsDown, true,  false, false, false, outputFileName);
   }
-
+ 
 //--- make plots of mean(uParl)/qT, rms(uParl)/qT, rms(uPerp)/qT
   plotUvsQtNumObjType* plotUvsQt  = 
     new plotUvsQtNumObjType(inputFile, "", -1, -1, "", 
@@ -1531,7 +1584,7 @@ int main(int argc, const char* argv[])
 			    isCaloMEt);
   std::cout << "running fits for inclusive event sample..." << std::endl;
   fitAndMakeControlPlots(plotUvsQt, outputFileName);
-
+/*
 //--- make plots of mean(uParl)/qT, rms(uParl)/qT, rms(uPerp)/qT
 //    in different bins of reconstructed jet multiplicity
   plotUvsQtNumObjType* plotUvsQtNumJetsPtGt10Eq0 = 
@@ -1689,7 +1742,7 @@ int main(int argc, const char* argv[])
 		getOutputFileName_plot(outputFileName, "leadJetEtaDependenceMC"));
   fitAndCompare(plotUvsQtNumObjsLeadJetEta, legendEntriesLeadJetEta, true, false, false, true, 
 		getOutputFileName_plot(outputFileName, "leadJetEtaDependenceData"));
- 
+ */
   delete inputFile;
 
 //--print time that it took macro to run

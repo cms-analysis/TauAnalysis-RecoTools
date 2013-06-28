@@ -5,9 +5,9 @@
  *
  * \author Christian Veelken, UC Davis
  *
- * \version $Revision: 1.17 $
+ * \version $Revision: 1.18 $
  *
- * $Id: FWLiteZllRecoilCorrectionAnalyzer.cc,v 1.17 2012/05/04 15:57:38 veelken Exp $
+ * $Id: FWLiteZllRecoilCorrectionAnalyzer.cc,v 1.18 2012/08/28 15:01:36 veelken Exp $
  *
  */
 
@@ -30,6 +30,8 @@
 #include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/Candidate/interface/CompositeCandidate.h"
 #include "DataFormats/Candidate/interface/CompositeCandidateFwd.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 #include "DataFormats/PatCandidates/interface/Muon.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/MET.h"
@@ -51,7 +53,7 @@
 #include "TauAnalysis/RecoTools/interface/ZllRecoilCorrectionHistManager.h"
 #include "TauAnalysis/RecoTools/interface/NoPileUpMEtInputHistManager.h"
 #include "TauAnalysis/RecoTools/interface/ZllRecoilCorrectionAlgorithm.h"
-#include "AnalysisDataFormats/TauAnalysis/interface/PFMEtSignCovMatrix.h"
+#include "DataFormats/METReco/interface/PFMEtSignCovMatrix.h"
 
 #include <TFile.h>
 #include <TTree.h>
@@ -102,6 +104,18 @@ int main(int argc, char* argv[])
   edm::ParameterSet cfgZllRecoilCorrectionAnalyzer = cfg.getParameter<edm::ParameterSet>("ZllRecoilCorrectionAnalyzer");
 
   edm::InputTag srcZllCandidates = cfgZllRecoilCorrectionAnalyzer.getParameter<edm::InputTag>("srcZllCandidates");
+  enum { kGen_qT, kGenAcc_qT, kRec_qT } ;
+  int qT = kRec_qT;
+  edm::InputTag srcGenParticles;
+  if ( cfgZllRecoilCorrectionAnalyzer.exists("qT") ) {
+    std::string qT_string = cfgZllRecoilCorrectionAnalyzer.getParameter<std::string>("qT");
+    if      ( qT_string == "rec"    ) qT = kRec_qT;
+    else if ( qT_string == "gen"    ) qT = kGen_qT;
+    else if ( qT_string == "genAcc" ) qT = kGenAcc_qT;
+    else throw cms::Exception("FWLiteZllRecoilCorrectionAnalyzer") 
+      << "Invalid Configuration Parameter 'qT' = " << qT_string << " !!\n";
+    if ( qT == kGen_qT || qT == kGenAcc_qT ) srcGenParticles = cfgZllRecoilCorrectionAnalyzer.getParameter<edm::InputTag>("srcGenParticles");
+  }
   edm::InputTag srcMuons = cfgZllRecoilCorrectionAnalyzer.getParameter<edm::InputTag>("srcMuons");
 
   edm::InputTag srcJets = cfgZllRecoilCorrectionAnalyzer.getParameter<edm::InputTag>("srcJets");
@@ -121,6 +135,7 @@ int main(int argc, char* argv[])
   }
 
   edm::InputTag srcNoPileUpMEtInputs = cfgZllRecoilCorrectionAnalyzer.getParameter<edm::InputTag>("srcNoPileUpMEtInputs");
+  edm::InputTag srcNoPileUpMEtSF = cfgZllRecoilCorrectionAnalyzer.getParameter<edm::InputTag>("srcNoPileUpMEtSF");
   vstring plotNoPileUpMEtInputs = cfgZllRecoilCorrectionAnalyzer.getParameter<vstring>("plotNoPileUpMEtInputs");
 
   edm::InputTag srcTrigger = cfgZllRecoilCorrectionAnalyzer.getParameter<edm::InputTag>("srcTrigger");
@@ -133,6 +148,7 @@ int main(int argc, char* argv[])
 
   edm::InputTag srcVertices = cfgZllRecoilCorrectionAnalyzer.getParameter<edm::InputTag>("srcVertices");
   edm::InputTag srcRhoNeutral = cfgZllRecoilCorrectionAnalyzer.getParameter<edm::InputTag>("srcRhoNeutral");
+  edm::InputTag srcRhoCharged = cfgZllRecoilCorrectionAnalyzer.getParameter<edm::InputTag>("srcRhoCharged");
 
   edm::InputTag srcEventCounter = cfgZllRecoilCorrectionAnalyzer.getParameter<edm::InputTag>("srcEventCounter");
 
@@ -181,7 +197,7 @@ int main(int argc, char* argv[])
       cfgZllRecoilCorrectionAnalyzer.getParameter<edm::ParameterSet>("algorithm");
     corrAlgorithm = new ZllRecoilCorrectionAlgorithm(cfgZllRecoilCorrectionAlgorithm);
   }
-  
+
   ZllRecoilCorrectionParameterSet* ZllRecoilCorrParameter_data = 0;
   if ( cfgZllRecoilCorrectionAnalyzer.exists("algorithm") ) {
     edm::ParameterSet cfgZllRecoilCorrectionAlgorithm = 
@@ -190,7 +206,7 @@ int main(int argc, char* argv[])
     edm::ParameterSet cfgZllRecoilCorrParameters_data = cfgZllRecoilCorrParameters.getParameter<edm::ParameterSet>("data");
     ZllRecoilCorrParameter_data = new ZllRecoilCorrectionParameterSet(cfgZllRecoilCorrParameters_data);
   }
-  
+
 //--- book "dummy" histogram counting number of processed events
   TH1* histogramEventCounter = fs.make<TH1F>("numEventsProcessed", "Number of processed Events", 3, -0.5, +2.5);
   histogramEventCounter->GetXaxis()->SetBinLabel(1, "all Events (DBS)");      // CV: bin numbers start at 1 (not 0) !!
@@ -203,46 +219,48 @@ int main(int argc, char* argv[])
   } else {
     histogramEventCounter->SetBinContent(1, -1.);
   }
-  
+
   double xSection = cfgZllRecoilCorrectionAnalyzer.getParameter<double>("xSection");
   double intLumiData = cfgZllRecoilCorrectionAnalyzer.getParameter<double>("intLumiData");
+
+  int verbosity = ( cfgZllRecoilCorrectionAnalyzer.exists("verbosity") ) ?
+    cfgZllRecoilCorrectionAnalyzer.getParameter<int>("verbosity") : 0;
 
 //--- create control plots
   TFileDirectory dir = ( directory != "" ) ? fs.mkdir(directory) : fs;
   edm::ParameterSet cfgZllRecoilCorrectionHistManager;
-  edm::ParameterSet cfgNoPileUpMEtInputHistManager;
-  cfgNoPileUpMEtInputHistManager.addParameter<edm::InputTag>("src", srcNoPileUpMEtInputs);
-  cfgNoPileUpMEtInputHistManager.addParameter<vstring>("inputsToPlot", plotNoPileUpMEtInputs);
-  ZllRecoilCorrectionHistManager* histogramsBeforeGenPUreweight 
-    = new ZllRecoilCorrectionHistManager(cfgZllRecoilCorrectionHistManager);
-  NoPileUpMEtInputHistManager* histogramsBeforeGenPUreweight2
-    = new NoPileUpMEtInputHistManager(cfgNoPileUpMEtInputHistManager);
+  cfgZllRecoilCorrectionHistManager.addParameter<int>("verbosity", verbosity);
+  ZllRecoilCorrectionHistManager* histogramsBeforeGenPUreweight = new ZllRecoilCorrectionHistManager(cfgZllRecoilCorrectionHistManager);
   TFileDirectory subdirBeforeGenPUreweight = dir.mkdir("beforeGenPUreweight");
   histogramsBeforeGenPUreweight->bookHistograms(subdirBeforeGenPUreweight);
-  histogramsBeforeGenPUreweight2->bookHistograms(subdirBeforeGenPUreweight);
-  ZllRecoilCorrectionHistManager* histogramsBeforeAddPUreweight 
-    = new ZllRecoilCorrectionHistManager(cfgZllRecoilCorrectionHistManager);
-  NoPileUpMEtInputHistManager* histogramsBeforeAddPUreweight2
-    = new NoPileUpMEtInputHistManager(cfgNoPileUpMEtInputHistManager);
+  ZllRecoilCorrectionHistManager* histogramsBeforeAddPUreweight = new ZllRecoilCorrectionHistManager(cfgZllRecoilCorrectionHistManager);
   TFileDirectory subdirBeforeAddPUreweight = dir.mkdir("beforeAddPUreweight");
   histogramsBeforeAddPUreweight->bookHistograms(subdirBeforeAddPUreweight);
-  histogramsBeforeAddPUreweight2->bookHistograms(subdirBeforeAddPUreweight);
-  ZllRecoilCorrectionHistManager* histogramsBeforeZllRecoilCorr 
-    = new ZllRecoilCorrectionHistManager(cfgZllRecoilCorrectionHistManager);
-  NoPileUpMEtInputHistManager* histogramsBeforeZllRecoilCorr2
-    = new NoPileUpMEtInputHistManager(cfgNoPileUpMEtInputHistManager);
+  ZllRecoilCorrectionHistManager* histogramsBeforeZllRecoilCorr = new ZllRecoilCorrectionHistManager(cfgZllRecoilCorrectionHistManager);
   TFileDirectory subdirBeforeZllRecoilCorr = dir.mkdir("beforeZllRecoilCorr");
   histogramsBeforeZllRecoilCorr->bookHistograms(subdirBeforeZllRecoilCorr);
-  histogramsBeforeZllRecoilCorr2->bookHistograms(subdirBeforeZllRecoilCorr);
-  ZllRecoilCorrectionHistManager* histogramsAfterZllRecoilMCtoDataCorr  
-    = new ZllRecoilCorrectionHistManager(cfgZllRecoilCorrectionHistManager);
+  ZllRecoilCorrectionHistManager* histogramsAfterZllRecoilMCtoDataCorr = new ZllRecoilCorrectionHistManager(cfgZllRecoilCorrectionHistManager);
   TFileDirectory subdirAfterZllRecoilMCtoDataCorr = dir.mkdir("afterZllRecoilMCtoDataCorr");
   histogramsAfterZllRecoilMCtoDataCorr->bookHistograms(subdirAfterZllRecoilMCtoDataCorr);
-  ZllRecoilCorrectionHistManager* histogramsAfterZllRecoilAbsCalib
-    = new ZllRecoilCorrectionHistManager(cfgZllRecoilCorrectionHistManager);
+  ZllRecoilCorrectionHistManager* histogramsAfterZllRecoilAbsCalib = new ZllRecoilCorrectionHistManager(cfgZllRecoilCorrectionHistManager);
   TFileDirectory subdirAfterZllRecoilAbsCalib  = dir.mkdir("afterZllRecoilAbsCalib");
   histogramsAfterZllRecoilAbsCalib->bookHistograms(subdirAfterZllRecoilAbsCalib);
-  
+  NoPileUpMEtInputHistManager* histogramsBeforeGenPUreweight2 = 0;
+  NoPileUpMEtInputHistManager* histogramsBeforeAddPUreweight2 = 0;
+  NoPileUpMEtInputHistManager* histogramsBeforeZllRecoilCorr2 = 0;
+  if ( srcNoPileUpMEtInputs.label() != "" ) {
+    edm::ParameterSet cfgNoPileUpMEtInputHistManager;
+    cfgNoPileUpMEtInputHistManager.addParameter<edm::InputTag>("src", srcNoPileUpMEtInputs);
+    cfgNoPileUpMEtInputHistManager.addParameter<edm::InputTag>("srcSF", srcNoPileUpMEtSF);
+    cfgNoPileUpMEtInputHistManager.addParameter<vstring>("inputsToPlot", plotNoPileUpMEtInputs);
+    histogramsBeforeGenPUreweight2 = new NoPileUpMEtInputHistManager(cfgNoPileUpMEtInputHistManager);
+    histogramsBeforeGenPUreweight2->bookHistograms(subdirBeforeGenPUreweight);
+    histogramsBeforeAddPUreweight2 = new NoPileUpMEtInputHistManager(cfgNoPileUpMEtInputHistManager);
+    histogramsBeforeAddPUreweight2->bookHistograms(subdirBeforeAddPUreweight);
+    histogramsBeforeZllRecoilCorr2 = new NoPileUpMEtInputHistManager(cfgNoPileUpMEtInputHistManager);
+    histogramsBeforeZllRecoilCorr2->bookHistograms(subdirBeforeZllRecoilCorr);
+  }
+ 
   std::ofstream* selEventsFile = ( selEventsFileName != "" ) ?
     new std::ofstream(selEventsFileName.data(), std::ios::out) : 0;
 
@@ -274,8 +292,10 @@ int main(int argc, char* argv[])
       ++numEvents_processed;
       if ( maxEvents > 0 && numEvents_processed >= maxEvents ) maxEvents_processed = true;
 
-      //std::cout << "processing run = " << evt.id().run() << ":" 
-      //	  << " ls = " << evt.luminosityBlock() << ", event = " << evt.id().event() << std::endl;
+      if ( verbosity ) {
+	std::cout << "processing run = " << evt.id().run() << ":" 
+		  << " ls = " << evt.luminosityBlock() << ", event = " << evt.id().event() << std::endl;
+      }
 
 //--- check if new luminosity section has started;
 //    if so, retrieve number of events contained in this luminosity section before skimming
@@ -287,7 +307,7 @@ int main(int argc, char* argv[])
 	lastLumiBlock_run = evt.id().run();
 	lastLumiBlock_ls = evt.luminosityBlock();
       }
- 
+
 //--- fill "dummy" histogram counting number of processed events
       histogramEventCounter->Fill(2);
 
@@ -352,6 +372,9 @@ int main(int argc, char* argv[])
       edm::Handle<double> rhoNeutral_handle;
       evt.getByLabel(srcRhoNeutral, rhoNeutral_handle);
       double rhoNeutral = (*rhoNeutral_handle);
+      edm::Handle<double> rhoCharged_handle;
+      evt.getByLabel(srcRhoCharged, rhoCharged_handle);
+      double rhoCharged = (*rhoCharged_handle);
 
       double addPUreweight = 1.0;
       if ( addPUreweightHistogram ) {
@@ -364,29 +387,80 @@ int main(int argc, char* argv[])
       }
 
 //--- find Z --> mu+ mu- candidate closest to nominal Z0 mass
-      edm::Handle<reco::CompositeCandidateCollection> ZllCandidates;
-      evt.getByLabel(srcZllCandidates, ZllCandidates);
-
       const reco::CompositeCandidate* bestZllCandidate = 0;
       const double nominalZmass = 91.19;
       double minMassDiff = -1.;
-      for ( reco::CompositeCandidateCollection::const_iterator ZllCandidate = ZllCandidates->begin();
-	    ZllCandidate != ZllCandidates->end(); ++ZllCandidate ) {
-	double massDiff = TMath::Abs(ZllCandidate->mass() - nominalZmass);
-	if ( bestZllCandidate == 0 || massDiff < minMassDiff ) {
-	  bestZllCandidate = &(*ZllCandidate);
-	  minMassDiff = massDiff;
+      double qX = 0.;
+      double qY = 0.;
+      if ( qT == kRec_qT ) {
+	edm::Handle<reco::CompositeCandidateCollection> ZllCandidates;
+	evt.getByLabel(srcZllCandidates, ZllCandidates);
+	for ( reco::CompositeCandidateCollection::const_iterator ZllCandidate = ZllCandidates->begin();
+	      ZllCandidate != ZllCandidates->end(); ++ZllCandidate ) {
+	  double massDiff = TMath::Abs(ZllCandidate->mass() - nominalZmass);
+	  if ( bestZllCandidate == 0 || massDiff < minMassDiff ) {
+	    bestZllCandidate = &(*ZllCandidate);
+	    minMassDiff = massDiff;
+	    qX = bestZllCandidate->px();
+	    qY = bestZllCandidate->py();
+	  }
 	}
-      }
-	    
-      if ( !bestZllCandidate ) {
-	//std::cout << "bestZllCandidate = " << bestZllCandidate << std::endl;
-	continue;
-      }
+      } else if ( qT == kGen_qT || qT == kGenAcc_qT ) {
+	edm::Handle<reco::GenParticleCollection> genParticles;
+	evt.getByLabel(srcGenParticles, genParticles);
+	reco::CompositeCandidate* genZllCandidate = 0;
+	for ( reco::GenParticleCollection::const_iterator genParticle = genParticles->begin();
+	      genParticle != genParticles->end(); ++genParticle ) {
+	  if ( genParticle->pdgId() == 22 || genParticle->pdgId() == 23 ) {
+	    double massDiff = TMath::Abs(genParticle->mass() - nominalZmass);
+	    if ( bestZllCandidate == 0 || massDiff < minMassDiff ) {
+	      std::vector<const reco::GenParticle*> daughters;
+	      findDaughters(&(*genParticle), daughters, -1);
+	      const reco::GenParticle* genMuPlus  = 0;
+	      const reco::GenParticle* genMuMinus = 0;
+	      for ( std::vector<const reco::GenParticle*>::const_iterator daughter = daughters.begin();
+		    daughter != daughters.end(); ++daughter ) {
+		if      ( (*daughter)->pdgId() == -13 ) genMuPlus  = (*daughter);
+		else if ( (*daughter)->pdgId() == +13 ) genMuMinus = (*daughter);
+	      }
+	      if ( genMuPlus && genMuMinus ) {
+		if ( genZllCandidate ) delete genZllCandidate;
+		genZllCandidate = new reco::CompositeCandidate(
+		  genParticle->charge(),
+		  genParticle->p4(),
+		  genParticle->vertex(),
+		  genParticle->pdgId(),
+		  genParticle->status());
+		genZllCandidate->addDaughter(*genMuPlus);
+		genZllCandidate->addDaughter(*genMuMinus);
+		qX = genZllCandidate->px();
+		qY = genZllCandidate->py();
+	      }
+	    }
+	  }
+	}	
+	if ( qT == kGenAcc_qT && genZllCandidate ) {
+	  reco::Candidate::LorentzVector sumP4;
+	  for ( reco::GenParticleCollection::const_iterator genParticle = genParticles->begin();
+		genParticle != genParticles->end(); ++genParticle ) {
+	    if ( genParticle->status() != 1 ) continue;
+	    int absPdgId = TMath::Abs(genParticle->pdgId());
+	    if ( absPdgId == 12 || absPdgId == 14 || absPdgId == 16 ) continue;
+	    if ( TMath::Abs(genParticle->eta()) < 5.0 ) sumP4 += genParticle->p4();
+	  }
+	  sumP4 -= genZllCandidate->p4();
+	  qX = -sumP4.px();
+	  qY = -sumP4.py();
+	}
+	//if ( genZllCandidate ) std::cout << "Found genZllCandidate." << std::endl;
+	//else std::cout << "Failed to find genZllCandidate !!" << std::endl;
+	bestZllCandidate = genZllCandidate;
+      } else assert(0);
+      if ( !bestZllCandidate ) continue;
 
       edm::Handle<pat::MuonCollection> muons;
       evt.getByLabel(srcMuons, muons);
-      
+
       edm::Handle<pat::JetCollection> jets;
       evt.getByLabel(srcJets, jets);
 
@@ -405,14 +479,20 @@ int main(int argc, char* argv[])
 	metCov = met->begin()->getSignificanceMatrix();
       }
       metCov *= square(sfMEtSignCovMatrix);
-  
+
       pat::MET rawMEt = (*met->begin());
       if ( applyMEtShiftCorr ) {
 	double sumEt = rawMEt.sumEt();
 	int numJets = 0;
 	for ( pat::JetCollection::const_iterator jet = jets->begin();
 	      jet != jets->end(); ++jet ) {
-	  if ( jet->pt() > shiftedMEtCorrJetPtThreshold ) ++numJets;
+	  bool isMuonOverlap = false;
+	  for ( pat::MuonCollection::const_iterator muon = muons->begin();
+		muon != muons->end(); ++muon ) {
+	    double dR = deltaR(jet->p4(), muon->p4());
+	    if ( dR < 0.5 ) isMuonOverlap = true;
+	  }
+	  if ( jet->pt() > shiftedMEtCorrJetPtThreshold && !isMuonOverlap ) ++numJets;
 	}
 	CorrMETData sysShiftCorrection = (*shiftedMEtCorrExtractor)(sumEt, vtxMultiplicity, numJets);
 	double rawMEtPx_sysShiftCorrected = rawMEt.px() + sysShiftCorrection.mex;
@@ -425,35 +505,54 @@ int main(int argc, char* argv[])
 	rawMEt.setP4(rawMEtP4_sysShiftCorrected);
       }
 
-      //edm::Handle<reco::PFCandidateCollection> pfCandidates;
-      //evt.getByLabel(srcPFCandidates, pfCandidates);
+      edm::Handle<reco::PFCandidateCollection> pfCandidates;
+      evt.getByLabel(srcPFCandidates, pfCandidates);
       
       reco::Candidate::LorentzVector p4PFChargedHadrons, p4PFNeutralHadrons, p4PFGammas;
-      //for ( reco::PFCandidateCollection::const_iterator pfCandidate = pfCandidates->begin();
-      //      pfCandidate != pfCandidates->end(); ++pfCandidate ) {
-      //  int pfCandidateType = pfCandidate->particleId();
-      //  if      ( pfCandidateType == reco::PFCandidate::h     ) p4PFChargedHadrons += pfCandidate->p4();
-      //  else if ( pfCandidateType == reco::PFCandidate::h0    ) p4PFNeutralHadrons += pfCandidate->p4();
-      //  else if ( pfCandidateType == reco::PFCandidate::gamma ) p4PFGammas         += pfCandidate->p4();
+      double sumEtPFChargedCand = 0.;
+      double sumEtPFNeutralCand = 0.;
+      for ( reco::PFCandidateCollection::const_iterator pfCandidate = pfCandidates->begin();
+            pfCandidate != pfCandidates->end(); ++pfCandidate ) {
+        int pfCandidateType = pfCandidate->particleId();
+        if      ( pfCandidateType == reco::PFCandidate::h     ) p4PFChargedHadrons += pfCandidate->p4();
+        else if ( pfCandidateType == reco::PFCandidate::h0    ) p4PFNeutralHadrons += pfCandidate->p4();
+        else if ( pfCandidateType == reco::PFCandidate::gamma ) p4PFGammas         += pfCandidate->p4();
+	if ( TMath::Abs(pfCandidate->charge()) > 0.5 ) sumEtPFChargedCand += pfCandidate->et();
+	else sumEtPFNeutralCand += pfCandidate->et();
+      }
+      //for ( pat::JetCollection::const_iterator jet = jets->begin();
+      //      jet != jets->end(); ++jet ) {
+      //  if ( jet->isPFJet() ) {
+      //    std::vector<reco::PFCandidatePtr> pfJetConstituents = jet->getPFConstituents();
+      //    for ( std::vector<reco::PFCandidatePtr>::const_iterator pfJetConstituent = pfJetConstituents.begin();
+      //	  pfJetConstituent != pfJetConstituents.end(); ++pfJetConstituent ) {
+      //      int pfCandidateType = (*pfJetConstituent)->particleId();
+      //      if      ( pfCandidateType == reco::PFCandidate::h     ) p4PFChargedHadrons += (*pfJetConstituent)->p4();
+      //      else if ( pfCandidateType == reco::PFCandidate::h0    ) p4PFNeutralHadrons += (*pfJetConstituent)->p4();
+      //      else if ( pfCandidateType == reco::PFCandidate::gamma ) p4PFGammas         += (*pfJetConstituent)->p4();
+      //      if ( TMath::Abs((*pfJetConstituent)->charge()) > 0.5 ) sumEtPFChargedCand += (*pfJetConstituent)->et();
+      //      else sumEtPFNeutralCand += (*pfJetConstituent)->et();
+      //    }
+      //  }
       //}
-      
+
       histogramsBeforeGenPUreweight->fillHistograms(
-	*bestZllCandidate, *muons, *jets, rawMEt, metCov, 
-	p4PFChargedHadrons, p4PFNeutralHadrons, p4PFGammas, 
-	numPU_bxMinus1, numPU_bx0, numPU_bxPlus1, *vertices, rhoNeutral, 1.0);
-      histogramsBeforeGenPUreweight2->fillHistograms(
+	*bestZllCandidate, qX, qY, *muons, *jets, rawMEt, metCov, 
+	p4PFChargedHadrons, p4PFNeutralHadrons, p4PFGammas, sumEtPFChargedCand, sumEtPFNeutralCand,
+	numPU_bxMinus1, numPU_bx0, numPU_bxPlus1, *vertices, rhoNeutral, rhoCharged, 1.0);
+      if ( histogramsBeforeGenPUreweight2 ) histogramsBeforeGenPUreweight2->fillHistograms(
 	*bestZllCandidate, *muons, *jets, evt, 1.0);     
       histogramsBeforeAddPUreweight->fillHistograms(
-        *bestZllCandidate, *muons, *jets, rawMEt, metCov,
-	p4PFChargedHadrons, p4PFNeutralHadrons, p4PFGammas, 
-	numPU_bxMinus1, numPU_bx0, numPU_bxPlus1, *vertices, rhoNeutral, genPUreweight);
-      histogramsBeforeAddPUreweight2->fillHistograms(
+        *bestZllCandidate, qX, qY, *muons, *jets, rawMEt, metCov,
+	p4PFChargedHadrons, p4PFNeutralHadrons, p4PFGammas, sumEtPFChargedCand, sumEtPFNeutralCand,
+	numPU_bxMinus1, numPU_bx0, numPU_bxPlus1, *vertices, rhoNeutral, rhoCharged, genPUreweight);
+      if ( histogramsBeforeAddPUreweight2 ) histogramsBeforeAddPUreweight2->fillHistograms(
 	*bestZllCandidate, *muons, *jets, evt, genPUreweight);
       histogramsBeforeZllRecoilCorr->fillHistograms(
-	*bestZllCandidate, *muons, *jets, rawMEt, metCov,
-	p4PFChargedHadrons, p4PFNeutralHadrons, p4PFGammas, 
-	numPU_bxMinus1, numPU_bx0, numPU_bxPlus1, *vertices, rhoNeutral, genPUreweight*addPUreweight);
-      histogramsBeforeZllRecoilCorr2->fillHistograms(
+	*bestZllCandidate, qX, qY, *muons, *jets, rawMEt, metCov,
+	p4PFChargedHadrons, p4PFNeutralHadrons, p4PFGammas, sumEtPFChargedCand, sumEtPFNeutralCand,
+	numPU_bxMinus1, numPU_bx0, numPU_bxPlus1, *vertices, rhoNeutral, rhoCharged, genPUreweight*addPUreweight);
+      if ( histogramsBeforeZllRecoilCorr2 ) histogramsBeforeZllRecoilCorr2->fillHistograms(
 	*bestZllCandidate, *muons, *jets, evt, genPUreweight*addPUreweight);
 
       if ( selEventsFile ) (*selEventsFile) << evt.id().run() << ":" << evt.luminosityBlock() << ":" << evt.id().event() << std::endl;
@@ -467,9 +566,9 @@ int main(int argc, char* argv[])
 	mcToDataCorrMEt = corrAlgorithm->buildZllCorrectedMEt(rawMEt, rawMEt.genMET()->p4(), bestZllCandidate->p4());
       }
       histogramsAfterZllRecoilMCtoDataCorr->fillHistograms(
-        *bestZllCandidate, *muons, *jets, mcToDataCorrMEt, metCov,
-	p4PFChargedHadrons, p4PFNeutralHadrons, p4PFGammas, 
-	numPU_bxMinus1, numPU_bx0, numPU_bxPlus1, *vertices, rhoNeutral, genPUreweight*addPUreweight);
+        *bestZllCandidate, qX, qY, *muons, *jets, mcToDataCorrMEt, metCov,
+	p4PFChargedHadrons, p4PFNeutralHadrons, p4PFGammas, sumEtPFChargedCand, sumEtPFNeutralCand,
+	numPU_bxMinus1, numPU_bx0, numPU_bxPlus1, *vertices, rhoNeutral, rhoCharged, genPUreweight*addPUreweight);
 
       pat::MET absCalibMEt(rawMEt);
       if ( ZllRecoilCorrParameter_data ) {
@@ -484,11 +583,15 @@ int main(int argc, char* argv[])
 	absCalibMEt.setP4(math::XYZTLorentzVector(absCalibMEtPx, absCalibMEtPy, 0., absCalibMEtPt));
       }
       histogramsAfterZllRecoilAbsCalib->fillHistograms(
-        *bestZllCandidate, *muons, *jets, absCalibMEt, metCov, 
-	p4PFChargedHadrons, p4PFNeutralHadrons, p4PFGammas, 
-	numPU_bxMinus1, numPU_bx0, numPU_bxPlus1, *vertices, rhoNeutral, genPUreweight*addPUreweight);
+        *bestZllCandidate, qX, qY, *muons, *jets, absCalibMEt, metCov, 
+	p4PFChargedHadrons, p4PFNeutralHadrons, p4PFGammas, sumEtPFChargedCand, sumEtPFNeutralCand,
+	numPU_bxMinus1, numPU_bx0, numPU_bxPlus1, *vertices, rhoNeutral, rhoCharged, genPUreweight*addPUreweight);
 
       ++numEvents_selected;
+
+      if ( qT == kGen_qT || qT == kGenAcc_qT ) {
+	delete bestZllCandidate;
+      }
     }
 
 //--- close input file
@@ -531,11 +634,11 @@ int main(int argc, char* argv[])
     }
 
     histogramsBeforeGenPUreweight->scaleHistograms(mcScaleFactor*lostStatCorrFactor);
-    histogramsBeforeGenPUreweight2->scaleHistograms(mcScaleFactor*lostStatCorrFactor);
+    if ( histogramsBeforeGenPUreweight2 ) histogramsBeforeGenPUreweight2->scaleHistograms(mcScaleFactor*lostStatCorrFactor);
     histogramsBeforeAddPUreweight->scaleHistograms(mcScaleFactor*lostStatCorrFactor);
-    histogramsBeforeAddPUreweight2->scaleHistograms(mcScaleFactor*lostStatCorrFactor);
+    if ( histogramsBeforeAddPUreweight2 ) histogramsBeforeAddPUreweight2->scaleHistograms(mcScaleFactor*lostStatCorrFactor);
     histogramsBeforeZllRecoilCorr->scaleHistograms(mcScaleFactor*lostStatCorrFactor);
-    histogramsBeforeZllRecoilCorr2->scaleHistograms(mcScaleFactor*lostStatCorrFactor);
+    if ( histogramsBeforeZllRecoilCorr2 ) histogramsBeforeZllRecoilCorr2->scaleHistograms(mcScaleFactor*lostStatCorrFactor);
     histogramsAfterZllRecoilMCtoDataCorr->scaleHistograms(mcScaleFactor*lostStatCorrFactor);
     histogramsAfterZllRecoilAbsCalib->scaleHistograms(mcScaleFactor*lostStatCorrFactor);
   }
